@@ -1,0 +1,1335 @@
+unit UPreviewFR;
+
+interface
+
+uses
+  //Anexo
+  Interfaces, Cores,
+  //Fast Report
+  frxClass, frxPreview, frxExportPDF, frxExportXLS,
+  //firedac
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
+  FireDAC.DApt.Intf, FireDAC.Stan.Async, FireDAC.DApt, Data.DB, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  //outlook
+  Vcl.OleServer, Outlook2010,
+  //Delphi
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics, Vcl.Controls,
+  Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls, Vcl.Buttons, Vcl.ExtCtrls, Vcl.Grids, Vcl.DBGrids, Datasnap.DBClient,
+  frxExportBaseDialog;
+
+type
+  TEmailNotificacao = (tEmail, tNotificacao);
+  TTipoAssuntoAnexo = (tAssunto, tAnexo);
+  TFPreviewFR = class(TForm)
+    StsBar: TStatusBar;
+    PBotoes: TPanel;
+    BtnImprimir: TBitBtn;
+    PRelatorio: TPanel;
+    BtnEMail: TBitBtn;
+    BtnFechar: TBitBtn;
+    frxPreview: TfrxPreview;
+    BtnPDF: TBitBtn;
+    Panel3: TPanel;
+    BtnNavPrimeiro: TBitBtn;
+    BtnNavAnterior: TBitBtn;
+    BtnNavUltimo: TBitBtn;
+    BtnNavProximo: TBitBtn;
+    EdtNumeroPagina: TEdit;
+    BtnIr: TBitBtn;
+    LblNumeroPaginas: TLabel;
+    Label2: TLabel;
+    SaveDialog: TSaveDialog;
+    PEMail: TPanel;
+    Panel4: TPanel;
+    Panel5: TPanel;
+    Panel6: TPanel;
+    BtnEMailCancelar: TBitBtn;
+    BtnEnvioSistema: TBitBtn;
+    Label3: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    EdtDestinatarios: TEdit;
+    EdtAssunto: TEdit;
+    MemoMensagem: TMemo;
+    Label7: TLabel;
+    GroupBox1: TGroupBox;
+    LstBoxAnexo: TListBox;
+    Label8: TLabel;
+    frxPDFExport1: TfrxPDFExport;
+    BtnEnvioGerenciador: TBitBtn;
+    BtnExcel: TBitBtn;
+    frxXLSExport1: TfrxXLSExport;
+    LblInfoEMailServidor: TLabel;
+    LblInfoEMailPorta: TLabel;
+    LblInfoEMailConexaoSegura: TLabel;
+    LblInfoEMailUsuario: TLabel;
+    Panel1: TPanel;
+    BtnZoomMenos: TBitBtn;
+    BtnZoomMais: TBitBtn;
+    CBZoom: TComboBox;
+    SQLEmail: TFDQuery;
+    OpenDialog1: TOpenDialog;
+    BtnRemover: TBitBtn;
+    Label1: TLabel;
+    SQLDados: TFDQuery;
+    BtnEditar: TBitBtn;
+    CBEmailUsuario: TComboBox;
+    CBEmailSMTP: TComboBox;
+    CBEmailPorta: TComboBox;
+    CBEmailSenha: TComboBox;
+    CBEmailConexaoSegura: TComboBox;
+    CBEmailPadraoDocumentoFiscal: TComboBox;
+    Label6: TLabel;
+    CBEmailAssunto: TComboBox;
+    CBEmailMensagem: TComboBox;
+    BtnAdicionar: TBitBtn;
+    BitBtn1: TBitBtn;
+    SpdBtnLocCliente: TSpeedButton;
+    BtnNotificacao: TBitBtn;
+    procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormActivate(Sender: TObject);
+    procedure FormKeyPress(Sender: TObject; var Key: Char);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure BtnFecharClick(Sender: TObject);
+    procedure BtnImprimirClick(Sender: TObject);
+    procedure BtnPDFClick(Sender: TObject);
+    procedure BtnEMailClick(Sender: TObject);
+    procedure BtnEMailCancelarClick(Sender: TObject);
+    procedure BtnEnvioSistemaClick(Sender: TObject);
+    procedure frxPreviewPageChanged(Sender: TfrxPreview; PageNo: Integer);
+    procedure BtnNavPrimeiroClick(Sender: TObject);
+    procedure BtnNavAnteriorClick(Sender: TObject);
+    procedure BtnNavProximoClick(Sender: TObject);
+    procedure BtnNavUltimoClick(Sender: TObject);
+    procedure BtnIrClick(Sender: TObject);
+    procedure BtnEnvioGerenciadorClick(Sender: TObject);
+    procedure SpdBtnLocClienteClick(Sender: TObject);
+    procedure BtnExcelClick(Sender: TObject);
+    procedure BtnZoomMaisClick(Sender: TObject);
+    procedure BtnZoomMenosClick(Sender: TObject);
+    procedure CBZoomChange(Sender: TObject);
+    procedure BtnRemoverClick(Sender: TObject);
+    procedure BtnEditarClick(Sender: TObject);
+    procedure CBEmailUsuarioChange(Sender: TObject);
+    procedure BtnAdicionarClick(Sender: TObject);
+    procedure BitBtn1Click(Sender: TObject);
+    procedure BtnNotificacaoClick(Sender: TObject);
+    procedure AbrirEmailNotificacao(EmailNotificacao: TEmailNotificacao);
+    function TextoAssuntoAnexo(tipoAssuntoAnexo: TTipoAssuntoAnexo): String;
+    procedure AdicionarArquivoListaAnexo(Arquivo: String);
+    function RemoverAcento(Texto: String): String;
+  private
+    CaminhoPDF: String;
+    { Private declarations }
+    function VerificaBranco: Boolean;
+    procedure ExibirNumeroPagina;
+    procedure HabilitaTela(Valor: Boolean);
+    function RetornarDescricaoInterface(Tipo: Integer): String;
+    function RetornarCaminhoPDF: String;
+    procedure HabilitarCabecalhos(Valor: Boolean);
+  public
+    InterfaceOrigem, FkMovimentacao, FkPessoa, Complemento: String;
+    ListaArquivos: TStringList;
+    { Public declarations }
+    procedure BuscaEmailCliente(FkCliente: String);
+  end;
+
+var
+  FPreviewFR: TFPreviewFR;
+  NomeArquivo: String;
+
+implementation
+
+{$R *.dfm}
+
+uses UDMRelatorio, UDM, UPrincipal, UEnvioNotificacao;
+
+procedure TFPreviewFR.BtnFecharClick(Sender: TObject);
+begin
+  Close;
+end;
+
+procedure TFPreviewFR.AbrirEmailNotificacao(EmailNotificacao: TEmailNotificacao);
+label
+  impressao;
+var
+  oExportfilter: TfrxCustomExportFilter;
+  I, Situacao: Integer;
+  X, Arquivo, Assunto: string;
+  DataEmissao: TDateTime;
+begin
+  EdtDestinatarios.Text:= '';
+  frxPreview.Lock;
+
+  LstBoxAnexo.Items.Clear;
+  if FileExists(CaminhoPDF) then
+    LstBoxAnexo.Items.Add(CaminhoPDF);
+
+  CaminhoPDF:= RetornarCaminhoPDF;
+  Assunto:= TextoAssuntoAnexo(tAssunto);
+  //Assunto:= RetornarDescricaoInterface(1);
+
+  oExportfilter:= TfrxCustomExportFilter(frxPDFExport1);
+  oExportFilter.ShowDialog:= False;
+  oExportFilter.FileName:= CaminhoPDF;
+
+  //********************************************************************************************************************
+{
+  if (EmailNotificacao = tEmail) then
+  begin
+    CBEmailPk.Items.Clear;
+    CBEmailUsuario.Items.Clear;
+    CBEmailSenha.Items.Clear;
+    CBEmailSMTP.Items.Clear;
+    CBEmailSetSSL.Items.Clear;
+    CBEmailSetTLS.Items.Clear;
+    CBEmailPorta.Items.Clear;
+    CBEmailPadraoDocumentoFiscal.Items.Clear;
+    CBEmailAssunto.Items.Clear;
+    CBEmailMensagem.Items.Clear;
+    CBCCEmailEmpresa.Items.Clear;
+    CBEmailConfirmacaoRecebimento.Items.Clear;
+
+    X:= 'select ce.pkemail, ce.usuario, ce.senha, ce.smtp, ce.setSSL, ce.setTLS, ce.porta, ce.padraodocumentofiscal,'
+      + ' ce.assunto, ce.mensagem, ce.ccemailempresa, confirmacaorecebimento '
+      + ' from tbconfiguracoesemail ce'
+      + ' where ce.FkEmpresa = ' + Wusu.EmpresaLogada.PkEmpresa;
+    vr.ExecutaSQL(X, DM.SqlGeral);
+    DM.SqlGeral.First;
+    while not DM.SqlGeral.Eof do
+    begin
+      CBEmailPk.Items.Add(DM.SqlGeral.FieldByName('pkemail').AsString);
+      CBEmailUsuario.Items.Add(DM.SqlGeral.FieldByName('usuario').AsString);
+      CBEmailSenha.Items.Add(DM.SqlGeral.FieldByName('senha').AsString);
+      CBEmailSMTP.Items.Add(DM.SqlGeral.FieldByName('smtp').AsString);
+      CBEmailSetSSL.Items.Add(DM.SqlGeral.FieldByName('setSSL').AsString);
+      CBEmailSetTLS.Items.Add(DM.SqlGeral.FieldByName('setTLS').AsString);
+      CBEmailPorta.Items.Add(DM.SqlGeral.FieldByName('porta').AsString);
+      CBEmailPadraoDocumentoFiscal.Items.Add(DM.SqlGeral.FieldByName('padraodocumentofiscal').AsString);
+      CBEmailAssunto.Items.Add(DM.SqlGeral.FieldByName('assunto').AsString);
+      CBEmailMensagem.Items.Add(DM.SqlGeral.FieldByName('mensagem').AsString);
+      CBCCEmailEmpresa.Items.Add(DM.SqlGeral.FieldByName('CCEmailEmpresa').AsString);
+      CBEmailConfirmacaoRecebimento.Items.Add(DM.SqlGeral.FieldByName('confirmacaorecebimento').AsString);
+
+      DM.SqlGeral.Next;
+    end;
+
+    if Wusu.FKConfiguracaoEmailPadrao <> '' then
+    begin
+      CBEmailUsuario.ItemIndex := CBEmailPk.Items.IndexOf(Wusu.FKConfiguracaoEmailPadrao);
+      CBEmailUsuarioChange(nil);
+    end;
+  end;
+          }
+  //********************************************************************************************************************
+
+  begin
+  {
+    if CBEmailPk.Text = '' then
+    begin
+      CBEmailUsuario.ItemIndex := 0;
+      CBEmailUsuarioChange(nil);
+    end;
+   }
+    DMRelatorio.frxReportGeral.Export(oExportFilter);
+  end;
+
+
+  AdicionarArquivoListaAnexo(CaminhoPDF);
+
+  EdtAssunto.Text:= Assunto;
+
+
+
+
+  //********************************************************************************************************************
+  impressao:
+
+  for I:= 0 to ListaArquivos.Count-1 do
+    if LstBoxAnexo.Items.IndexOf(ListaArquivos.Strings[I]) = -1 then
+      LstBoxAnexo.Items.Add(ListaArquivos.Strings[I]);
+
+  //********************************************************************************************************************
+
+  if (EmailNotificacao = tNotificacao) then
+  begin
+    if FEnvioNotificacao = nil then
+      Application.CreateForm(TFEnvioNotificacao, FEnvioNotificacao);
+    FEnvioNotificacao.CarregarContatos(FkPessoa);
+    FEnvioNotificacao.LimparListaArquivo;
+    for I:= 0 to LstBoxAnexo.Items.Count-1 do
+      FEnvioNotificacao.AdicionarArquivo(LstBoxAnexo.Items.Strings[I]);
+    FEnvioNotificacao.ShowModal;
+
+    Exit;
+  end;
+
+  //********************************************************************************************************************
+
+  if FkPessoa <> '' then
+    BuscaEmailCliente(FkPessoa);
+
+  HabilitaTela(False);
+  vr.CentralizarPanel(FPrincipal, PEMail);
+  PEMail.Visible:= True;
+    {
+  if (wusu.EmpresaLogada.WSelecioneContatoEmail = 1) and (FkPessoa <> '') then
+  begin
+    PEMail.Enabled := False;
+    CarregaContatos(FkPessoa);
+    vr.CentralizarPanel(FPrincipal, PEmailContato);
+    PEmailContato.Visible := True;
+  end
+  else
+  begin
+    if (EnvioEmailAutomatico)
+    and (Trim(EdtDestinatarios.Text) <> '')    //manutencao 7724,7771
+    and (Trim(MemoMensagem.Text) <> '') then   //manutencao 7836
+    begin
+      BtnEnvioSistemaClick(nil);
+      EnvioEmailAutomatico:= False;
+    end;
+  end;
+
+     }
+end;
+
+procedure TFPreviewFR.AdicionarArquivoListaAnexo(Arquivo: String);
+var
+  I: Integer;
+begin
+  for I:= 0 to LstBoxAnexo.Items.Count-1 do
+    if Arquivo = LstBoxAnexo.Items[I] then
+      Exit;
+
+  LstBoxAnexo.Items.add(Arquivo);
+
+
+end;
+
+procedure TFPreviewFR.BitBtn1Click(Sender: TObject);
+begin
+  frxPreview.PageSetupDlg;
+end;
+
+procedure TFPreviewFR.BtnAdicionarClick(Sender: TObject);
+var
+  Arquivo : string;
+begin
+  OpenDialog1.Title := 'Adicionar Arquivo';
+  OpenDialog1.DefaultExt := '*.*';
+  OpenDialog1.Filter := 'Todos os Arquivos (*.*)|*.*';
+  //OpenDialog1.InitialDir := FPrincipal.ACBrNFe.Configuracoes.Arquivos.PathSalvar;
+  OpenDialog1.Execute;
+
+  Arquivo := Trim(OpenDialog1.FileName);
+
+  if ((Arquivo <> EmptyStr) and (FileExists(Arquivo))) then
+    LstBoxAnexo.Items.Add(Arquivo)
+end;
+
+procedure TFPreviewFR.BtnEditarClick(Sender: TObject);
+begin
+  DMRelatorio.frxReportGeral.DesignReport;
+end;
+
+procedure TFPreviewFR.BtnEMailCancelarClick(Sender: TObject);
+begin
+  HabilitaTela(True);
+  PEMail.Visible:= False;
+end;
+
+procedure TFPreviewFR.BtnEMailClick(Sender: TObject);
+var
+  oExportfilter: TfrxCustomExportFilter;
+  I: Integer;
+  X, arquivo, CaminhoIntegracao, Assunto: string;
+begin
+  CaminhoPDF:= RetornarCaminhoPDF;
+  Assunto:= RetornarDescricaoInterface(1);
+
+  oExportfilter:= TfrxCustomExportFilter(frxPDFExport1);
+  oExportFilter.ShowDialog:= False;
+  oExportFilter.FileName:= CaminhoPDF;
+
+  CBEmailUsuario.Items.Clear;
+  CBEmailSenha.Items.Clear;
+  CBEmailSMTP.Items.Clear;
+  CBEmailConexaoSegura.Items.Clear;
+  CBEmailPorta.Items.Clear;
+  CBEmailPadraoDocumentoFiscal.Items.Clear;
+  CBEmailAssunto.Items.Clear;
+  CBEmailMensagem.Items.Clear;
+
+  X:= 'select ce.usuario, ce.senha, ce.smtp, ce.smtpconexaosegura, ce.porta, ce.padraodocumentofiscal,'
+    + ' ce.assunto, ce.mensagem'
+    + ' from tbconfiguracoesemail ce';
+  //  + ' where ce.FkEmpresa = ' + Wusu.EmpresaLogada.PkEmpresa;
+  vr.ExecutarSQL(X, DM.SqlGeral);
+  DM.SqlGeral.First;
+  while not DM.SqlGeral.Eof do
+  begin
+    CBEmailUsuario.Items.Add(DM.SqlGeral.FieldByName('usuario').AsString);
+    CBEmailSenha.Items.Add(DM.SqlGeral.FieldByName('senha').AsString);
+    CBEmailSMTP.Items.Add(DM.SqlGeral.FieldByName('smtp').AsString);
+    CBEmailConexaoSegura.Items.Add(DM.SqlGeral.FieldByName('smtpconexaosegura').AsString);
+    CBEmailPorta.Items.Add(DM.SqlGeral.FieldByName('porta').AsString);
+    CBEmailPadraoDocumentoFiscal.Items.Add(DM.SqlGeral.FieldByName('padraodocumentofiscal').AsString);
+    CBEmailAssunto.Items.Add(DM.SqlGeral.FieldByName('assunto').AsString);
+    CBEmailMensagem.Items.Add(DM.SqlGeral.FieldByName('mensagem').AsString);
+
+    DM.SqlGeral.Next;
+  end;
+
+  LstBoxAnexo.Items.Clear;
+  LstBoxAnexo.Items.Add(CaminhoPDF);
+
+  CBEmailUsuario.ItemIndex := 0;
+  CBEmailUsuarioChange(nil);
+  DMRelatorio.frxReportGeral.Export(oExportFilter);
+  EdtAssunto.Text:= Assunto;
+
+  for I:= 0 to ListaArquivos.Count-1 do
+    if LstBoxAnexo.Items.IndexOf(ListaArquivos.Strings[I]) = -1 then
+      LstBoxAnexo.Items.Add(ListaArquivos.Strings[I]);
+
+  if FkPessoa <> '' then
+    BuscaEmailCliente(FkPessoa);
+
+  HabilitaTela(False);
+  vr.CentralizarPanel(FPrincipal, PEMail);
+  PEMail.Visible:= True;
+end;
+
+procedure TFPreviewFR.BtnEnvioGerenciadorClick(Sender: TObject);
+var
+  I: Integer;
+  OutlookApplication1: TOutlookApplication;
+  Mail: Variant;
+begin
+  OutlookApplication1:= TOutlookApplication.Create(self);
+
+  Mail:= OutlookApplication1.CreateItem($00000000);
+  Mail.to:= EdtDestinatarios.Text;
+  Mail.Subject:= EdtAssunto.Text;
+  Mail.Body:= MemoMensagem.Lines.Text;
+  for I:= 0 to LstBoxAnexo.Items.Count-1 do
+    Mail.Attachments.Add(LstBoxAnexo.Items.Strings[I]);
+  //Mail.GetInspector.Activate;
+  Mail.Display(True);
+  OutlookApplication1.Disconnect;
+end;
+
+procedure TFPreviewFR.BtnEnvioSistemaClick(Sender: TObject);
+var
+  Para, S, X: String;
+  CC, ParaStrings, Erro: Tstrings;
+  I: Integer;
+begin
+  if not(VerificaBranco) then
+    Exit;
+  Erro:= TStringList.Create;
+
+  X:= 'select e.emailempresa, e.nomefantasia'
+    + ' from tbempresa e';
+    //+ ' where e.pkcodempresa =  ' + Wusu.EmpresaLogada.PkEmpresa;
+  vr.ExecutarSQL(X, DM.SqlGeral);
+
+  try
+    Para:= EdtDestinatarios.Text;
+    CC:= TStringList.Create;
+
+    //coloca o email de envio de emial cadastrdo no cliente
+    S:= Para;
+    while S <> '' do
+    begin
+      i:= Pos(';', S);
+      if i = 0 then
+        i:= Length(s)+1;
+      cc.Add(Copy(s,1,i-1));
+      Delete(s,1,i);
+    end;
+
+    ParaStrings := TStringList.Create;
+    ParaStrings.Assign(CC);
+
+    Para:= CC[0];
+    CC.Delete(0);
+
+    DM.ACBrMail1.Clear;
+    DM.ACBrMail1.AddAddress(Para);
+
+    for I := 0 to CC.Count-1 do
+      DM.ACBrMail1.AddCC(CC[i]);
+
+    if Trim(DM.SQLGeral.FieldByName('emailempresa').AsString) <> '' then
+    begin
+      DM.ACBrMail1.AddCC(DM.SQLGeral.FieldByName('emailempresa').AsString); // opcional
+      DM.ACBrMail1.AddReplyTo(DM.SQLGeral.FieldByName('emailempresa').AsString); // opcional
+    end
+    else
+    begin
+      DM.ACBrMail1.AddCC(CBEmailUsuario.Text); // opcional
+      DM.ACBrMail1.AddReplyTo(CBEmailUsuario.Text); // opcional
+    end;
+
+    DM.ACBrMail1.FromName:= DM.SQLGeral.FieldByName('nomefantasia').AsString;
+    DM.ACBrMail1.ReadingConfirmation:= True;
+    DM.ACBrMail1.UseThread:= False;
+    DM.ACBrMail1.Subject:= EdtAssunto.Text;
+    DM.ACBrMail1.IsHTML:= True;
+
+    for I:= 0 to LstBoxAnexo.Items.Count-1 do
+      if FileExists(LstBoxAnexo.Items.Strings[I])
+      then DM.ACBrMail1.AddAttachment(LstBoxAnexo.Items.Strings[I]);
+
+    DM.ACBrMail1.Host     := CBEmailSMTP.Text;
+    DM.ACBrMail1.Port     := CBEmailPorta.Text;
+    DM.ACBrMail1.Username := CBEmailUsuario.Text;
+    DM.ACBrMail1.Password := CBEmailSenha.Text;
+    DM.ACBrMail1.From     := CBEmailUsuario.Text;
+    DM.ACBrMail1.SetSSL   := (StrToIntDef(CBEmailConexaoSegura.Text, 0) = 1); // SSL - ConexÃ£o Segura
+    DM.ACBrMail1.SetTLS   := (StrToIntDef(CBEmailConexaoSegura.Text, 0) = 1); // Auto TLS
+    DM.ACBrMail1.Body.Text:= '<html><body>' + MemoMensagem.Lines.Text.Replace(sLineBreak, '<br/>') + '</body></html>';
+    DM.ACBrMail1.Send(False);
+
+    CC.Free;
+  except on E: System.SysUtils.Exception do
+    Erro.Add('Ocorreu o seguinte erro ao enviar email para: ' + para + ' ' + E. Message);
+  end;
+
+  if(Erro.Text <> '')then
+    ShowMessage(Erro.Text)
+  else
+    ShowMessage('E-mail enviado com sucesso.');
+  BtnEMailCancelarClick(nil);
+end;
+
+procedure TFPreviewFR.BtnExcelClick(Sender: TObject);
+var
+  oExportfilter: TfrxCustomExportFilter;
+  X, Caminho, caminhoexportacao: String;
+begin
+  {X:= 'select caminhoexportacao from tbconfiguracaogeral';
+  vr.ExecutarSQL(X, dm.SQLAux4);
+
+  CaminhoExportacao := DM.SQLAux4.FieldByName('caminhoexportacao').AsString;
+
+  if CaminhoExportacao = '' then
+  begin                }
+    SaveDialog.Filter:= 'Arquivos Excel|*.xls|Todos arquivos|*.*';
+    SaveDialog.DefaultExt:= '.xls';
+    SaveDialog.Execute;
+    Caminho:= SaveDialog.FileName;
+    if Trim(Caminho) = '' then
+      Exit;
+ { end
+  else
+    Caminho:= CaminhoExportacao + '\' + DMRelatorio.SQLListaRelatorio.FieldByName('descricao').AsString + '.xls';      }
+
+  oExportfilter:= TfrxCustomExportFilter(frxXLSExport1);
+  oExportFilter.ShowDialog := False;
+  oExportFilter.FileName   := Caminho;
+
+  HabilitarCabecalhos(False);
+  DMRelatorio.frxReportGeral.Preview.RefreshReport;
+  DMRelatorio.frxReportGeral.Export(oExportFilter);
+  HabilitarCabecalhos(True);
+  DMRelatorio.frxReportGeral.Preview.RefreshReport;
+end;
+
+procedure TFPreviewFR.BtnImprimirClick(Sender: TObject);
+begin
+  frxPreview.Print;
+end;
+
+procedure TFPreviewFR.BtnIrClick(Sender: TObject);
+begin
+  frxPreview.SetPosition(StrToIntDef(EdtNumeroPagina.Text,1), 0);
+end;
+
+procedure TFPreviewFR.BtnNavAnteriorClick(Sender: TObject);
+begin
+  frxPreview.Prior;
+  ExibirNumeroPagina
+end;
+
+procedure TFPreviewFR.BtnNavPrimeiroClick(Sender: TObject);
+begin
+  frxPreview.First;
+  ExibirNumeroPagina
+end;
+
+procedure TFPreviewFR.BtnNavProximoClick(Sender: TObject);
+begin
+  frxPreview.Next;
+  ExibirNumeroPagina
+end;
+
+procedure TFPreviewFR.BtnNavUltimoClick(Sender: TObject);
+begin
+  frxPreview.Last;
+  ExibirNumeroPagina
+end;
+
+procedure TFPreviewFR.BtnNotificacaoClick(Sender: TObject);
+begin
+ AbrirEmailNotificacao(tNotificacao);
+end;
+
+procedure TFPreviewFR.BtnPDFClick(Sender: TObject);
+var
+  oExportfilter: TfrxCustomExportFilter;
+  Caminho: String;
+begin
+  SaveDialog.Filter:= 'Arquivos PDF|*.pdf|Todos arquivos|*.*';
+  SaveDialog.DefaultExt:= '.pdf';
+  SaveDialog.Execute;
+  Caminho:= SaveDialog.FileName;
+  if Trim(Caminho) = '' then
+    Exit;
+
+  oExportfilter:= TfrxCustomExportFilter(frxPDFExport1);
+  oExportFilter.ShowDialog:= False;
+  oExportFilter.FileName:= Caminho;
+
+  DMRelatorio.frxReportGeral.Export(oExportFilter);
+end;
+
+procedure TFPreviewFR.BtnRemoverClick(Sender: TObject);
+begin
+  if LstBoxAnexo.Items.Count > 0 then
+    LstBoxAnexo.DeleteSelected;
+end;
+
+procedure TFPreviewFR.BtnZoomMaisClick(Sender: TObject);
+begin
+  if CBZoom.ItemIndex in [6,7] then
+  begin
+    CBZoom.ItemIndex:= 5;
+    CBZoomChange(nil);
+  end
+  else
+  if CBZoom.ItemIndex < 6 then
+  begin
+    CBZoom.ItemIndex:= CBZoom.ItemIndex + 1;
+    CBZoomChange(nil);
+  end;
+end;
+
+procedure TFPreviewFR.BtnZoomMenosClick(Sender: TObject);
+begin
+  if CBZoom.ItemIndex <> 0 then
+  begin
+    CBZoom.ItemIndex:= CBZoom.ItemIndex - 1;
+    CBZoomChange(nil);
+  end;
+end;
+
+procedure TFPreviewFR.BuscaEmailCliente(FkCliente: String);
+begin
+  {
+  if FkCliente = '' then
+    Exit;
+
+  TipoPessoa:= 0;
+  FkPessoa:= FkCliente;
+
+  X:= 'select email,emailnfe from tbcliente'
+    + ' where pkcodcli = ' + FkCliente;
+  vr.ExecutarSQL(X, SQLEmail);
+  if ((InterfaceOrigem = Interfaces.NFE) or (InterfaceOrigem = Interfaces.NFSE)) and (Trim(SQLEmail.FieldByName('emailnfe').AsString) <> '') then
+    EdtDestinatarios.Text:= Trim(SQLEmail.FieldByName('emailnfe').AsString) + ';'
+  else if Trim(SQLEmail.FieldByName('email').AsString) <> '' then
+    EdtDestinatarios.Text:= Trim(SQLEmail.FieldByName('email').AsString) + ';';
+}
+
+end;
+
+procedure TFPreviewFR.CBEmailUsuarioChange(Sender: TObject);
+begin
+  CBEmailSenha.ItemIndex                 := CBEmailUsuario.ItemIndex;
+  CBEmailSMTP.ItemIndex                  := CBEmailUsuario.ItemIndex;
+  CBEmailConexaoSegura.ItemIndex         := CBEmailUsuario.ItemIndex;
+  CBEmailPorta.ItemIndex                 := CBEmailUsuario.ItemIndex;
+  CBEmailPadraoDocumentoFiscal.ItemIndex := CBEmailUsuario.ItemIndex;
+  CBEmailAssunto.ItemIndex               := CBEmailUsuario.ItemIndex;
+  CBEmailMensagem.ItemIndex              := CBEmailUsuario.ItemIndex;
+
+  if(Trim(CBEmailAssunto.Text) <> EmptyStr)then
+    EdtAssunto.Text := CBEmailAssunto.Text;
+
+  if(Trim(CBEmailMensagem.Text) <> EmptyStr)then
+  begin
+    MemoMensagem.Lines.Clear;
+    MemoMensagem.Lines.Add(CBEmailMensagem.Text);
+  end;
+
+  LblInfoEMailServidor.Caption:= 'Servidor SMTP: ' + CBEmailSMTP.Text;
+  LblInfoEMailPorta.Caption:= 'Porta: ' + CBEmailPorta.Text;
+  LblInfoEMailUsuario.Caption:= 'Usuário: ' + CBEmailUsuario.Text;
+  if StrToIntDef(CBEmailConexaoSegura.Text, 0) = 1 then
+    LblInfoEMailConexaoSegura.Caption:= 'Conexão Segura: Sim'
+  else
+    LblInfoEMailConexaoSegura.Caption:= 'Conexão Segura: Não';
+end;
+
+procedure TFPreviewFR.CBZoomChange(Sender: TObject);
+begin
+  case CBZoom.ItemIndex of
+    0 : frxPreview.Zoom:= 0.25;
+    1 : frxPreview.Zoom:= 0.50;
+    2 : frxPreview.Zoom:= 0.75;
+    3 : frxPreview.Zoom:= 1;
+    4 : frxPreview.Zoom:= 1.5;
+    5 : frxPreview.Zoom:= 2;
+    6 : frxPreview.ZoomMode:= frxClass.zmPageWidth;
+    7 : frxPreview.ZoomMode:= frxClass.zmWholePage;
+  end;
+end;
+
+procedure TFPreviewFR.ExibirNumeroPagina;
+begin
+  LblNumeroPaginas.Caption:= IntToStr(frxPreview.PageNo) + ' de ' + IntToStr(frxPreview.PageCount);
+  EdtNumeroPagina.Text:= IntToStr(frxPreview.PageNo);
+end;
+
+procedure TFPreviewFR.FormActivate(Sender: TObject);
+begin
+  frxPreview.RefreshReport;
+end;
+
+procedure TFPreviewFR.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  if FileExists(CaminhoPDF) then
+    DeleteFile(CaminhoPDF);
+
+  NomeArquivo:= '';
+  FPreviewFR:= nil;
+  Action:= caFree;
+end;
+
+procedure TFPreviewFR.FormCreate(Sender: TObject);
+begin
+  StsBar.Panels[0].Text:= DMRelatorio.frxReportGeral.FileName;
+  BtnEditar.Visible:= vr.GetNomeComputador = 'CHUCKNORRIS';
+
+  CaminhoPDF:= ExtractFilePath(ParamStr(0)) + 'ReportTMP\';
+  if not(DirectoryExists(CaminhoPDF)) then
+    CreateDir(CaminhoPDF);
+
+  ListaArquivos:= TStringList.Create;
+  frxPreview.Zoom:= 1;
+end;
+
+procedure TFPreviewFR.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if not(PEMail.Visible) then
+    if (Shift = [ssCtrl]) and (Key = Ord('P')) then
+      BtnImprimirClick(nil);
+end;
+
+procedure TFPreviewFR.FormKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key in ['''', '"', '#'] then
+  begin
+    Key:= #0;
+  end;
+
+  if key = #13 then
+  begin
+    if not (ActiveControl is TMemo) then
+    begin
+      Key:= #0;
+      Perform(Wm_NextDlgCtl,0,0);
+    end;
+  end;
+
+  if Key = #27 then
+  begin
+    Key:= #0;
+    if PEMail.Visible then
+      BtnEMailCancelarClick(nil)
+    else
+      Close;
+  end;
+end;
+
+procedure TFPreviewFR.frxPreviewPageChanged(Sender: TfrxPreview; PageNo: Integer);
+begin
+  ExibirNumeroPagina;
+end;
+
+procedure TFPreviewFR.HabilitarCabecalhos(Valor: Boolean);
+var
+  I : Integer;
+  Band: TfrxBand;
+begin
+  for I := 0 to DMRelatorio.frxReportGeral.ComponentCount-1 do
+  begin
+    Band := nil;
+
+    if pos('ReportTitle', DMRelatorio.frxReportGeral.Components[I].Name) > 0 then
+      Band := TfrxReportTitle(DMRelatorio.frxReportGeral.FindObject(DMRelatorio.frxReportGeral.Components[I].Name))
+    else if pos('PageHeader', DMRelatorio.frxReportGeral.Components[I].Name) > 0 then
+      Band := TfrxPageHeader(DMRelatorio.frxReportGeral.FindObject(DMRelatorio.frxReportGeral.Components[I].Name))
+    else if pos('PageFooter', DMRelatorio.frxReportGeral.Components[I].Name) > 0 then
+      Band := TfrxPageFooter(DMRelatorio.frxReportGeral.FindObject(DMRelatorio.frxReportGeral.Components[I].Name));
+
+    if Band <> nil then
+      Band.Visible := Valor
+  end;
+end;
+
+procedure TFPreviewFR.HabilitaTela(Valor: Boolean);
+begin
+  PRelatorio.Enabled:= Valor;
+  PBotoes.Enabled:= Valor;
+end;
+
+function TFPreviewFR.RemoverAcento(Texto: String): String;
+const
+  Acentos = 'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûýýþÿRr';
+  Normais = 'AAAAAAACEEEEIIIIDNOOOOOOUUUUYBSaaaaaaaceeeeiiiidnoooooouuuyybyRr';
+var
+  R: String;
+  I: Integer;
+  a: Integer;
+begin
+  Texto:= Trim(Texto);
+
+  r:= '';
+  for a := 1 to Length(Texto) do
+    if Pos(Texto[a], Acentos) > 0 then
+      r := r + Normais[Pos(Texto[a], Acentos)]
+    else
+      r := r + Texto[a];
+  Texto:= r;
+
+  R:= '';
+  for I:= 1 to Length(Texto) do
+  begin
+    if Texto[I] = ' ' then
+      R:= R + ''
+    else if not(Texto[I] in ['a'..'z', 'A'..'Z']) then
+      R:= R + ''
+    else
+      R:= R + Texto[I];
+  end;
+
+  Result:= R;
+
+
+end;
+
+function TFPreviewFR.RetornarCaminhoPDF: String;
+begin
+  RetornarCaminhoPDF := ExtractFilePath(CaminhoPDF) + RetornarDescricaoInterface(0) + '.pdf';
+end;
+
+function TFPreviewFR.RetornarDescricaoInterface(Tipo : Integer) : String;
+var
+  DescricaoInterface : string;
+begin
+  DescricaoInterface := '';
+
+  if InterfaceOrigem = Interfaces.PERFIL then
+    DescricaoInterface := 'Perfis'
+  else if InterfaceOrigem = Interfaces.USUARIO then
+    DescricaoInterface := 'Usuários'
+  else if InterfaceOrigem = Interfaces.MODULO then
+    DescricaoInterface := 'Módulos'
+  else if InterfaceOrigem = Interfaces.AINTERFACE then
+    DescricaoInterface := 'Interfaces'
+  else if InterfaceOrigem = Interfaces.EMPRESA then
+    DescricaoInterface := 'Empresas'
+  else if InterfaceOrigem = Interfaces.RELATORIO then
+    DescricaoInterface := 'Relatórios'
+  else if InterfaceOrigem = Interfaces.LOG then
+    DescricaoInterface := 'Logs'
+  else if InterfaceOrigem = Interfaces.ALTERARSENHA then
+    DescricaoInterface := 'Alterar Senha'
+  else if InterfaceOrigem = Interfaces.CIDADE then
+    DescricaoInterface := 'Cidades'
+  else if InterfaceOrigem = Interfaces.PESSOA then
+    DescricaoInterface := 'Pessoa'
+  else if InterfaceOrigem = Interfaces.COMBUSTIVEL then
+    DescricaoInterface := 'Combustíveis'
+  else if InterfaceOrigem = Interfaces.CONFIGURACAOGERAL then
+    DescricaoInterface := 'Configuração Geral'
+  else if InterfaceOrigem = Interfaces.COR then
+    DescricaoInterface := 'Cor'
+  else if InterfaceOrigem = Interfaces.TIPOCONTADOR then
+    DescricaoInterface := 'Tipo de Contador'
+  else if InterfaceOrigem = Interfaces.BEM then
+    DescricaoInterface := 'Bens'
+  else if InterfaceOrigem = Interfaces.CENTROCUSTO then
+    DescricaoInterface := 'Centro de Custo'
+  else if InterfaceOrigem = Interfaces.CENTROTRABALHO then
+    DescricaoInterface := 'Centro de Trabalho'
+  else if InterfaceOrigem = Interfaces.FABRICANTE then
+    DescricaoInterface := 'Fabricante'
+  else if InterfaceOrigem = Interfaces.TIPOAQUISICAO then
+    DescricaoInterface := 'Tipo de Aquisição'
+  else if InterfaceOrigem = Interfaces.TIPOFAMILIA then
+    DescricaoInterface := 'Tipo de Família'
+  else if InterfaceOrigem = Interfaces.DESENHO then
+    DescricaoInterface := 'Desenho'
+  else if InterfaceOrigem = Interfaces.LOCAL then
+    DescricaoInterface := 'Local'
+  else if InterfaceOrigem = Interfaces.MEDIDA then
+    DescricaoInterface := 'Medida'
+  else if InterfaceOrigem = Interfaces.PRODUTO then
+    DescricaoInterface := 'Produto'
+  else if InterfaceOrigem = Interfaces.STATUS then
+    DescricaoInterface := 'Status'
+  else if InterfaceOrigem = Interfaces.TIPOMANUTENCAO then
+    DescricaoInterface := 'Tipo de Manutenção'
+  else if InterfaceOrigem = Interfaces.INTERVALO then
+    DescricaoInterface := 'INtervalo'
+  else if InterfaceOrigem = Interfaces.TAREFA then
+    DescricaoInterface := 'Tarefa'
+  else if InterfaceOrigem = Interfaces.UNIDADE then
+    DescricaoInterface := 'Unidade'
+  else if InterfaceOrigem = Interfaces.MOTIVO then
+    DescricaoInterface := 'Motivo'
+  else if InterfaceOrigem = Interfaces.AREA then
+    DescricaoInterface := 'Área'
+  else if InterfaceOrigem = Interfaces.ATRIBUTO then
+    DescricaoInterface := 'Atributo'
+  else if InterfaceOrigem = Interfaces.MANUTENCAO then
+    DescricaoInterface := 'Manutenção'
+  else if InterfaceOrigem = Interfaces.SUBSTITUIRCONTADOR then
+    DescricaoInterface := 'Substituir Contador'
+  else if InterfaceOrigem = Interfaces.CHECKLIST then
+    DescricaoInterface := 'CheckList'
+  else if InterfaceOrigem = Interfaces.FUNCAO then
+    DescricaoInterface := 'Função'
+  else if InterfaceOrigem = Interfaces.COMPONENTE then
+    DescricaoInterface := 'Componente'
+  else if InterfaceOrigem = Interfaces.OS then
+    DescricaoInterface := 'OS'
+  else if InterfaceOrigem = Interfaces.LANCAMENTOCONTADOR then
+    DescricaoInterface := 'Lançamento de Contador'
+  else if InterfaceOrigem = Interfaces.POSTO then
+    DescricaoInterface := 'Posto'
+  else if InterfaceOrigem = Interfaces.BOMBA then
+    DescricaoInterface := 'Bomba'
+  else if InterfaceOrigem = Interfaces.TANQUE then
+    DescricaoInterface := 'Tanque'
+  else if InterfaceOrigem = Interfaces.NOTAENTRADACOMBUSTIVEL then
+    DescricaoInterface := 'Nota de Entrada de Combustível'
+  else if InterfaceOrigem = Interfaces.LANCAMENTOSAIDACOMBUSTIVEL then
+    DescricaoInterface := 'Lançamento de Combustível'
+  else if InterfaceOrigem = Interfaces.CONSULTACOMBUSTIVEL then
+    DescricaoInterface := 'Consulta de Combustível'
+  else if InterfaceOrigem = Interfaces.CAUTELA then
+    DescricaoInterface := 'Cautela'
+  else if InterfaceOrigem = Interfaces.PNEU then
+    DescricaoInterface := 'Pneu'
+  else if InterfaceOrigem = Interfaces.FABRICANTEPNEU then
+    DescricaoInterface := 'Fabricante de Pneu'
+  else if InterfaceOrigem = Interfaces.MODELOPNEU then
+    DescricaoInterface := 'Modelo de Pneu'
+  else if InterfaceOrigem = Interfaces.RECAPAGEM then
+    DescricaoInterface := 'Recapagem'
+  else if InterfaceOrigem = Interfaces.CHASSI then
+    DescricaoInterface := 'Chassi'
+  else if InterfaceOrigem = Interfaces.MOVIMENTACAOPNEU then
+    DescricaoInterface := 'Movimentação de Pneu'
+  else if InterfaceOrigem = Interfaces.CONSULTASPNEU then
+    DescricaoInterface := 'Consulta de Pneu'
+  else if InterfaceOrigem = Interfaces.TIPOCONSERTO then
+    DescricaoInterface := 'Tipo de Conserto'
+  else if InterfaceOrigem = Interfaces.CONFIGURACAOGRID then
+    DescricaoInterface := 'Configuração de Grid'
+  else if InterfaceOrigem = Interfaces.INDICADORANOMALIA then
+    DescricaoInterface := 'Indicadores de anomalia'
+  else if InterfaceOrigem = Interfaces.AFERIMENTO then
+    DescricaoInterface := 'Aferições'
+  else if InterfaceOrigem = Interfaces.DESPESA then
+    DescricaoInterface := 'Despesas';
+
+  //********************************************************************************************************************
+
+  if Trim(DescricaoInterface) <> '' then
+  begin
+    if (NomeArquivo <> '') then
+      DescricaoInterface:= NomeArquivo;
+
+    if Trim(FkMovimentacao) <> '' then
+    begin
+      if (NomeArquivo <> '') then
+        DescricaoInterface:= NomeArquivo;
+      if FkMovimentacao <> '' then
+        DescricaoInterface := DescricaoInterface + ' N ' + FkMovimentacao;
+      //if Trim(FkPessoa) <> '' then
+      //  DescricaoInterface := DescricaoInterface + ' - ' + BuscarNomeSacadoCedente(FkPessoa)
+    end;
+  end
+  else
+    DescricaoInterface := 'Relatório';
+
+  RetornarDescricaoInterface := DescricaoInterface;
+end;
+
+procedure TFPreviewFR.SpdBtnLocClienteClick(Sender: TObject);
+{var
+  aux: integer;
+  }
+begin
+{
+  wDestinatarioEnvio:= '';
+  aux:= ULocPessoa.LocPessoa;
+  FLocPessoa.LocPessoa:= 99;
+  Application.CreateForm(TFLocPessoa, FLocPessoa);
+  FLocPessoa.ShowModal;
+  EdtDestinatarios.Text:= EdtDestinatarios.Text + wDestinatarioEnvio;
+  FLocPessoa.LocPessoa:= aux;
+  }
+end;
+
+function TFPreviewFR.TextoAssuntoAnexo(tipoAssuntoAnexo: TTipoAssuntoAnexo): String;
+var
+  Texto: String;
+begin
+  Texto:= '';
+
+  if InterfaceOrigem = Interfaces.PERFIL then                      Texto := 'Perfl'
+  else if InterfaceOrigem = Interfaces.USUARIO then                Texto := 'Usuário'
+  else if InterfaceOrigem = Interfaces.MODULO then                 Texto := 'Módulo'
+  else if InterfaceOrigem = Interfaces.AINTERFACE then             Texto := 'Interface'
+  else if InterfaceOrigem = Interfaces.EMPRESA then                Texto := 'Empresa'
+  ;
+  {
+  //else if InterfaceOrigem = Interfaces.CONFIGURACAONFe then      Texto := 'Configurações'
+  //else if InterfaceOrigem = Interfaces.NFEPADRAO then            Texto := 'NFF-es'
+  //else if InterfaceOrigem = Interfaces.RELATORIO then            Texto := 'Relatórios'
+  else if InterfaceOrigem = Interfaces.LOG then                    Texto := 'Log'
+  //else if InterfaceOrigem = Interfaces.ALTERARSENHA then         Texto := 'Alterações de Senha'
+  else if InterfaceOrigem = Interfaces.CIDADE then                 Texto := 'Cidade'
+  else if InterfaceOrigem = Interfaces.CLASSIFICACAOCLIENTE then   Texto := 'Classificação de Cliente'
+  else if InterfaceOrigem = Interfaces.TIPOCLIENTE then            Texto := 'Tipo de Cliente'
+  else if InterfaceOrigem = Interfaces.TECNICOFUNCIONARIO then     Texto := 'Técnico/Funcionário'
+  else if InterfaceOrigem = Interfaces.REPRESENTACAO then          Texto := 'Representação'
+  else if InterfaceOrigem = Interfaces.REPRESENTANTE then          Texto := 'Representante'
+  else if InterfaceOrigem = Interfaces.FUNCAO then                 Texto := 'Função'
+  else if InterfaceOrigem = Interfaces.DEPARTAMENTO then           Texto := 'Departamento'
+  else if InterfaceOrigem = Interfaces.RAMOATIVIDADE then          Texto := 'Ramo de Atividade'
+  else if InterfaceOrigem = Interfaces.STATUS then                 Texto := 'Status'
+  else if InterfaceOrigem = Interfaces.MAOOBRA then                Texto := 'Mão de Obra'
+  else if InterfaceOrigem = Interfaces.SERVICO then                Texto := 'Serviço'
+  else if InterfaceOrigem = Interfaces.UNIDADE then                Texto := 'Unidade'
+  else if InterfaceOrigem = Interfaces.CATEGORIA then              Texto := 'Categoria'
+  else if InterfaceOrigem = Interfaces.SUBCATEGORIA then           Texto := 'SubCategoria'
+  else if InterfaceOrigem = Interfaces.MARCA then                  Texto := 'Marca'
+  else if InterfaceOrigem = Interfaces.CLASSIFICACAOFISCAL then    Texto := 'Classificação Fiscal'
+  else if InterfaceOrigem = Interfaces.SITUACAOTRIBUTARIA then     Texto := 'Situação Tributária'
+  else if InterfaceOrigem = Interfaces.REDUZIDO then               Texto := 'Reduzido'
+  else if InterfaceOrigem = Interfaces.ALIQUOTAICMS then           Texto := 'Aliquota de ICMS'
+  else if InterfaceOrigem = Interfaces.UF then                     Texto := 'UF'
+  else if InterfaceOrigem = Interfaces.ITENSBASECUSTO then         Texto := 'Itens de base de custo'
+  else if InterfaceOrigem = Interfaces.GRADEPRODUTO then           Texto := 'Grade de produto'
+  else if InterfaceOrigem = Interfaces.TABELAPRECO then            Texto := 'Tabela de preço'
+  else if InterfaceOrigem = Interfaces.ATRIBUTOWEB then            Texto := 'Atributo Web'
+  else if InterfaceOrigem = Interfaces.CEST then                   Texto := 'CEST'
+  else if InterfaceOrigem = Interfaces.CONFIGURACAOCOMISSAO then   Texto := 'Configuração de comissão'
+  else if InterfaceOrigem = Interfaces.NATUREZAOPERACAO then       Texto := 'CFOP'
+  else if InterfaceOrigem = Interfaces.MOTIVO then                 Texto := 'Motivo'
+  else if InterfaceOrigem = Interfaces.wCONDICAOPAGAMENTO then      Texto := 'Condiçção de pagamento'
+  else if InterfaceOrigem = Interfaces.FORMAPAGAMENTO then         Texto := 'Forma de pagamento'
+  //else if InterfaceOrigem = Interfaces.MODELOEQUIPAMENTO then    Texto := 'Modelo de equipamento'
+  else if InterfaceOrigem = Interfaces.CONTADOR then               Texto := 'Contador'
+  else if InterfaceOrigem = Interfaces.ESTOFAMENTOESTRUTURA then   Texto := 'Estofamento/Estrutura'
+  else if InterfaceOrigem = Interfaces.SEMANA then                 Texto := 'Semana'
+  else if InterfaceOrigem = Interfaces.ETAPAPRODUCAO then          Texto := 'Etapa de produção'
+  else if InterfaceOrigem = Interfaces.FACA then                   Texto := 'Faca'
+  else if InterfaceOrigem = Interfaces.PAPEL then                  Texto := 'Papel'
+  else if InterfaceOrigem = Interfaces.TEMPLATE then               Texto := 'Template'
+  else if InterfaceOrigem = Interfaces.PASTA then                  Texto := 'Pasta'
+  else if InterfaceOrigem = Interfaces.NFCE then                   Texto := 'NFCe'
+  else if InterfaceOrigem = Interfaces.NFSE then                   Texto := 'NFSe'
+  else if InterfaceOrigem = Interfaces.NFE then                    Texto := 'NFe'
+  else if InterfaceOrigem = Interfaces.CLIENTE then                Texto := 'Cliente'
+  else if InterfaceOrigem = Interfaces.FORNECEDOR then             Texto := 'Fornecedor'
+  else if InterfaceOrigem = Interfaces.TRANSPORTADORA then         Texto := 'Transportadora'
+  else if InterfaceOrigem = Interfaces.VENDEDOR then               Texto := 'Vendedor'
+  else if InterfaceOrigem = Interfaces.PRODUTO then                Texto := 'Produto'
+  else if InterfaceOrigem = Interfaces.MATERIAPRIMA then           Texto := 'Matéria Prima'
+  else if InterfaceOrigem = Interfaces.SACADOCEDENTE then          Texto := 'Pagador/Beneficiário'
+  //else if InterfaceOrigem = Interfaces.IMPORTARNFEXML then       Texto := 'Importar NF-es'
+  //else if InterfaceOrigem = Interfaces.PADRAOCONTASESTOQUE then  Texto := 'Padrões de conta Estoque'
+  else if InterfaceOrigem = Interfaces.LISTAGEMCODIGOSERVICO then  Texto := 'Código de serviço'
+  else if InterfaceOrigem = Interfaces.VEICULO then                Texto := 'Veículo'
+  else if InterfaceOrigem = Interfaces.CONSULTAPRODUTOLUCRO then   Texto := 'Consulta de produtos com indíce de lucro'
+  else if InterfaceOrigem = Interfaces.LISTAGEMPRODUTOOPERACOESCOMERCIAIS then Texto := 'Produtos X Operações comerciais'
+  else if InterfaceOrigem = Interfaces.CONSULTAANALITICAPRODUTO then           Texto := 'Consulta analítica de produtos'
+  else if InterfaceOrigem = Interfaces.CONSULTAANALITICASERVICO then           Texto := 'Consulta analítica de serviços'
+  else if InterfaceOrigem = Interfaces.PLANODECONTAS then          Texto := 'Plano de contas'
+  else if InterfaceOrigem = Interfaces.CONSULTAVENDAS then         Texto := 'Consulta de vendas'
+  else if InterfaceOrigem = Interfaces.CONSULTACLIENTE then        Texto := 'Consulta de clientes'
+  else if InterfaceOrigem = Interfaces.CURVAABC then               Texto := 'Curva ABC'
+  else if InterfaceOrigem = Interfaces.GRAFICOVENDAS then          Texto := 'Gráfico de Vendas'
+  //else if InterfaceOrigem = Interfaces.SOBRE then                Texto := 'Sobre'
+  //else if InterfaceOrigem = Interfaces.NOVIDADE then             Texto := 'Novidades'
+  else if InterfaceOrigem = Interfaces.FILIAL then                 Texto := 'Filial'
+  else if InterfaceOrigem = Interfaces.ESTOQUE then                Texto := 'Estoque de Produto'
+  else if InterfaceOrigem = Interfaces.ESTOQUEMATERIAPRIMA then    Texto := 'Estoque de Matérias prima'
+  else if InterfaceOrigem = Interfaces.INVENTARIO then             Texto := 'Inventário de Produto'
+  else if InterfaceOrigem = Interfaces.INVENTARIOMATERIAPRIMA then Texto := 'Inventário de matérias prima'
+  else if InterfaceOrigem = Interfaces.ORDEMCOMPRA then            Texto := 'Cotação'//manutencao:4930
+  else if InterfaceOrigem = Interfaces.NOTAENTRADA then            Texto := 'Nota de Entrada'
+  else if InterfaceOrigem = Interfaces.CONSERTO then               Texto := 'Conserto'
+  else if InterfaceOrigem = Interfaces.TIPOCONSERTO then           Texto := 'Tipo de Movimentação'
+  else if InterfaceOrigem = Interfaces.DESCRITIVO then             Texto := 'Descritivo'
+  else if InterfaceOrigem = Interfaces.OPERACAO then               Texto := 'Operaçõe'
+  else if InterfaceOrigem = Interfaces.RELATORIODESPESAS then      Texto := 'Despesas'
+  else if InterfaceOrigem = Interfaces.HORAEXTRA then              Texto := 'Horas extras'
+  //else if InterfaceOrigem = Interfaces.CONTRATO then             Texto := 'Contrato'
+  else if InterfaceOrigem = Interfaces.ORCAMENTO then              Texto := 'Orçamento'
+  //else if InterfaceOrigem = Interfaces.ORCAMENTOPDV then         Texto := 'Orçamento'
+  else if InterfaceOrigem = Interfaces.ORCAMENTOTECNICO then       Texto := 'Orçamento Técnico'
+  else if InterfaceOrigem = Interfaces.PEDIDO then                 Texto := 'Pedido'
+  //else if InterfaceOrigem = Interfaces.ORDEMPRODUCAO then        Texto := 'Ordens de produção'
+  else if InterfaceOrigem = Interfaces.ORDEMPRODUCAONOVA then      Texto := 'Ordem de Produção'
+  else if InterfaceOrigem = Interfaces.ROMANEIO then               Texto := 'Romaneio'
+  else if InterfaceOrigem = Interfaces.COMODATO then               Texto := 'Comodato'
+  else if InterfaceOrigem = Interfaces.EQUIPAMENTOCOMODATO then    Texto := 'Equipamento de comodato'
+  else if InterfaceOrigem = Interfaces.REPOSICAO then              Texto := 'Reposição'
+  else if InterfaceOrigem = Interfaces.DEVOLUCAOREPOSICAO then     Texto := 'Devolução de reposição'
+  else if InterfaceOrigem = Interfaces.REPOSICAOINDIVIDUAL then    Texto := 'Reposição individual'
+  else if InterfaceOrigem = Interfaces.REPOSICAOAGRUPADA then      Texto := 'Reposição agrupada'
+  else if InterfaceOrigem = Interfaces.LOCACAO then                Texto := 'Locação'
+  else if InterfaceOrigem = Interfaces.REQUISICAOMONTAGEM then     Texto := 'Requisição de montagem'
+  else if InterfaceOrigem = Interfaces.EXPEDICAO then              Texto := 'Expedição'
+  else if InterfaceOrigem = Interfaces.EMPENHO then                Texto := 'Empenho'
+  else if InterfaceOrigem = Interfaces.RESERVADO then              Texto := 'Reserva de Produto'
+  //else if InterfaceOrigem = Interfaces.GERARNOTASCONTRATOMIDIA then Texto := 'Notas de mídia'
+  else if InterfaceOrigem = Interfaces.VEICULOMIDIA then           Texto := 'Veículo de mídia'
+  else if InterfaceOrigem = Interfaces.AGENCIA then                Texto := 'Agência'
+  else if InterfaceOrigem = Interfaces.PONTOS then                 Texto := 'Ponto de mídia'
+  else if InterfaceOrigem = Interfaces.OSMIDIA then                Texto := 'Ordem de Serviço de mídia'
+  else if InterfaceOrigem = Interfaces.OSAUTOCENTER then           Texto := 'OS'
+  else if InterfaceOrigem = Interfaces.MARCAVEICULO then           Texto := 'Marca de veículo'
+  else if InterfaceOrigem = Interfaces.COMBUSTIVEL then            Texto := 'Combustível'
+  else if InterfaceOrigem = Interfaces.CORVEICULO then             Texto := 'Corer de veículo'
+  else if InterfaceOrigem = Interfaces.CONTASRECEBER then          Texto := 'Contas a receber'
+  else if InterfaceOrigem = Interfaces.CONTASPAGAR then            Texto := 'Contas a pagar'
+  else if InterfaceOrigem = Interfaces.MOVIMENTACAOCPR then        Texto := 'Movimentação CPR'
+  else if InterfaceOrigem = Interfaces.MOVIMENTACAOCONTAS then     Texto := 'Movimentação de conta'
+  else if InterfaceOrigem = Interfaces.CONVENIO then               Texto := 'Convênio'
+  else if InterfaceOrigem = Interfaces.BOLETOS then                Texto := 'Boleto'
+  else if InterfaceOrigem = Interfaces.HISTORICOBOLETOS then       Texto := 'Histórioco de boleto'
+  //else if InterfaceOrigem = Interfaces.GERARREMESSA then         Texto := 'Remessa'
+  //else if InterfaceOrigem = Interfaces.CANCELARREMESSA then      Texto := 'Remessa canceladas'
+  //else if InterfaceOrigem = Interfaces.RECEBERRETORNO then       Texto := 'Retorno'
+  else if InterfaceOrigem = Interfaces.VALE then                   Texto := 'Vale'
+  else if InterfaceOrigem = Interfaces.CARTAO then                 Texto := 'Operadora de Cartão'
+  else if InterfaceOrigem = Interfaces.LANCAMENTOCARTAO then       Texto := 'Lançamentos de Cartão'
+  else if InterfaceOrigem = Interfaces.BANCO then                  Texto := 'Banco'
+  else if InterfaceOrigem = Interfaces.CHEQUE then                 Texto := 'Cheques'
+  else if InterfaceOrigem = Interfaces.CHEQUEEMITIDO then          Texto := 'Cheques emitidos'
+  else if InterfaceOrigem = Interfaces.CUSTODIACHEQUE then         Texto := 'Custódia de cheques'
+  else if InterfaceOrigem = Interfaces.COMISSAOPAGAR then          Texto := 'Comissões a pagar'
+  else if InterfaceOrigem = Interfaces.IMPRESSAODUPLICATAS then    Texto := 'Impressões de duplicata'
+  else if InterfaceOrigem = Interfaces.DUPLICATACRIACAO then       Texto := 'Duplicatas de cartão'//AVULSAS
+  else if InterfaceOrigem = Interfaces.DESCONTODUPLICATA then      Texto := 'Descontos de duplicata'
+  else if InterfaceOrigem = Interfaces.CONTAREGENTE then           Texto := 'Conta regente'
+  else if InterfaceOrigem = Interfaces.CONTASUBORDINADA then       Texto := 'Conta subordinada'
+  else if InterfaceOrigem = Interfaces.HISTORICO then              Texto := 'Histórico Padrão'
+  else if InterfaceOrigem = Interfaces.RECIBO then                 Texto := 'Recibo'
+  //else if InterfaceOrigem = Interfaces.EXPORTACAOCONTABILIDADE then      Texto := 'Exportações para contabilidade'
+  //else if InterfaceOrigem = Interfaces.SPED then                         Texto := 'SPED'
+  //else if InterfaceOrigem = Interfaces.LIBERACAO then                    Texto := 'Liberações'
+  else if InterfaceOrigem = Interfaces.CONSULTAEQUIPAMENTOPREVENTIVA then  Texto := 'Consulta de equipamentos (preventiva)'
+  else if InterfaceOrigem = Interfaces.CONSULTAEQUIPAMENTO then            Texto := 'Consulta de equipamentos'
+  //else if InterfaceOrigem = Interfaces.PARCELAS then                     Texto := 'Parcelas'
+  else if InterfaceOrigem = Interfaces.CONTASVENCER then                   Texto := 'Contas a vencer'
+  else if InterfaceOrigem = Interfaces.CONSULTAVEICULO then                Texto := 'Consulta de veículos'
+  else if InterfaceOrigem = Interfaces.FERIADO then                        Texto := 'Feriado'
+  else if InterfaceOrigem = Interfaces.TIPOCOMPROMISSO then                Texto := 'Tipos de compromisso'
+  else if InterfaceOrigem = Interfaces.AGENDACOMPROMISSO then              Texto := 'Compromisso'
+  else if InterfaceOrigem = Interfaces.PROSPECCAO then                     Texto := 'Prospecção'
+  else if InterfaceOrigem = Interfaces.COMPROMISSOINDIVIDUAL then          Texto := 'Compromissos individuais'
+  else if InterfaceOrigem = Interfaces.PREVENTIVA then                     Texto := 'Preventiva'
+  //else if InterfaceOrigem = Interfaces.EXPORTARWMW then                Texto := 'Exportações WMW'
+  //else if InterfaceOrigem = Interfaces.IMPORTARWMW then                Texto := 'Importações WMW'
+  //else if InterfaceOrigem = Interfaces.MODELONOTA then                 Texto := 'Modelos de nota'
+  //else if InterfaceOrigem = Interfaces.MODELOFATURA then               Texto := 'Modelos de fatura'
+  //else if InterfaceOrigem = Interfaces.MODELOETIQUETA then             Texto := 'Modelos de etiqueta'
+  //else if InterfaceOrigem = Interfaces.GERARNOTASCONTRATO then         Texto := 'Notas de contratos'
+  //else if InterfaceOrigem = Interfaces.SMSENVIO then                   Texto := 'Envios de SMS'
+  //else if InterfaceOrigem = Interfaces.SMSRELATORIO then               Texto := 'SMSs'
+  //else if InterfaceOrigem = Interfaces.SMSMENSAGEMPADRAO then          Texto := 'Mensagens padrões'
+  //else if InterfaceOrigem = Interfaces.UTILITARIOSECF then             Texto := 'Utilitários de ECF'
+  //else if InterfaceOrigem = Interfaces.ADICIONARPRODUTOPEDIDO then     Texto := 'Adições de produtos (Pedido)'
+  //else if InterfaceOrigem = Interfaces.ADICIONARQUANTIDADEPRODUTO then Texto := 'Adições de quantidade aos produtos (Pedido)'
+  //else if InterfaceOrigem = Interfaces.SINCRONISMOFILIAL then          Texto := 'Sincronismos (Matriz)'
+  //else if InterfaceOrigem = Interfaces.SINCRONISMAGENTO then           Texto := 'Sincronismos (Magento)'
+  //else if InterfaceOrigem = Interfaces.IMPORTARHORARIOPONTO then       Texto := 'Importações do horários ponto'
+  else if InterfaceOrigem = Interfaces.LANCAMENTOHORARIOPONTO then       Texto := 'Lançamentos de horário ponto'
+  else if InterfaceOrigem = Interfaces.CONFIGURACAOECF then              Texto := 'Configurações de ECF'
+  //else if InterfaceOrigem = Interfaces.CONFIGURACAOSMS then            Texto := 'Configurações de SMS'
+  //else if InterfaceOrigem = Interfaces.CONFIGURACAOBOLETO then         Texto := 'Configurações de boleto'
+  //else if InterfaceOrigem = Interfaces.CONFIGURACAOLIBERACAO then      Texto := 'Configurações de liberações'
+  else if InterfaceOrigem = Interfaces.CONTAS then                       Texto := 'Contas'
+  else if InterfaceOrigem = Interfaces.DEVOLUCAO then                    Texto := 'Devoluções'
+  else if InterfaceOrigem = Interfaces.ATRIBUTOPADRAOCONTRATO then       Texto := 'Atributos padrões'
+  else if InterfaceOrigem = Interfaces.PARAMETROPADRAOCONTRATO then      Texto := 'Paramêtros padrões'
+  else if InterfaceOrigem = Interfaces.CONTRATOPRESTACAOSERVICO then     Texto := 'Contratos de prestação de serviço'
+  else if InterfaceOrigem = Interfaces.ORDEMPRESTACAOSERVICO then        Texto := 'Ordens de prestação de serviço'
+  //else if InterfaceOrigem = Interfaces.CONFIGURACAOSISTEMA then        Texto := 'Configurações do sistema'
+  else if InterfaceOrigem = Interfaces.HISTORICOREMESSA then             Texto := 'Hostóricos de remessa'
+  //else if InterfaceOrigem = Interfaces.IMPORTACAOPRODUTOS then         Texto := 'Importações de produtos'
+  //else if InterfaceOrigem = Interfaces.ATUALIZAPRECO then              Texto := 'Atualizações de preço'
+  //else if InterfaceOrigem = Interfaces.ATRASO then                     Texto := 'Atrasos'
+  //else if InterfaceOrigem = Interfaces.ATRASOCONTAS then               Texto := 'Contas em atraso'
+  else if InterfaceOrigem = Interfaces.ORCAMENTOETIQUETA then            Texto := 'Orçamento de etiqueta'
+  //else if InterfaceOrigem = Interfaces.IMPORTAR then                   Texto := 'Importações'
+  //else if InterfaceOrigem = Interfaces.MANUFATURAMENTO then            Texto := 'Manufatramentos'
+  else if InterfaceOrigem = Interfaces.EQUIPAMENTO then                  Texto := 'Equipamento'
+  else if InterfaceOrigem = Interfaces.PONTOEVENTO then                  Texto := 'Ponto de evento'
+  else if InterfaceOrigem = Interfaces.EVENTONOME then                   Texto := 'Nome de evento'
+  //else if InterfaceOrigem = Interfaces.SINCRONISMOOCORRENCIA then      Texto := 'Sincronismos de ocorrência'
+  else if InterfaceOrigem = Interfaces.CAIXA then                        Texto := 'Caixa'
+  else if InterfaceOrigem = Interfaces.CAIXAFILIAL then                  Texto := 'Caixa das filiais'
+  //else if InterfaceOrigem = Interfaces.NFEEMISSAO then                 Texto := 'Emissões de NFe'
+  //else if InterfaceOrigem = Interfaces.NFSEEMISSAO then                Texto := 'Emissões de NFS-e'
+  //else if InterfaceOrigem = Interfaces.AVISO then                      Texto := 'Avisos'
+  //else if InterfaceOrigem = Interfaces.BOLETOALTERACAO then            Texto := 'Alterações de boleto'
+  //else if InterfaceOrigem = Interfaces.ENVIARNOTASFISCAIS then         Texto := 'Envios de notas fiscais'
+  //else if InterfaceOrigem = Interfaces.IMPORTACAOPESSOAS then          Texto := 'Importações de pessoas'
+  else if InterfaceOrigem = Interfaces.SAT then                          Texto := 'SAT'
+  else if InterfaceOrigem = Interfaces.CONFIGURACAOGRID then             Texto := 'Configurações de GRID'
+  else if InterfaceOrigem = Interfaces.DRE then                          Texto := 'DRE'
+  else if InterfaceOrigem = Interfaces.FLUXOCAIXA then                   Texto := 'Fluxo de caixa'
+  else if InterfaceOrigem = Interfaces.ENVIOSMS then                     Texto := 'Envio de SMS'
+  else if InterfaceOrigem = Interfaces.RENEGOCIACAO then                 Texto := 'Renegociação'
+  else if InterfaceOrigem = Interfaces.MDFe then                         Texto := 'MDFe'
+  //else if InterfaceOrigem = Interfaces.UNIFICARCADASTROS then            Texto := ''
+  //else if InterfaceOrigem = Interfaces.PRINCIPAL then                    Texto := ''
+  else if InterfaceOrigem = Interfaces.AGENDA then                       Texto := 'Agenda'
+  else if InterfaceOrigem = Interfaces.GRAFICOCLIENTES then              Texto := 'Gráfico de Clientes'
+  else if InterfaceOrigem = Interfaces.DRO then                          Texto := 'DRO'
+  else if InterfaceOrigem = Interfaces.CARNE then                        Texto := 'Carnê'
+  else if InterfaceOrigem = Interfaces.MANUFATURA then                   Texto := 'Manufatura'
+  else if InterfaceOrigem = Interfaces.NFVENDA then                      Texto := 'NF de Venda'
+  else if InterfaceOrigem = Interfaces.PARAMETROPADRAOOP then            Texto := 'Parêmento Padrão de Operação'
+  else if InterfaceOrigem = Interfaces.CSTPISCOFINS then                 Texto := 'CST de PIS e CONFINS'
+  else if InterfaceOrigem = Interfaces.CONSULTALOTE then                 Texto := 'Consulta de Lote'
+  else if InterfaceOrigem = Interfaces.LOTE then                            Texto := 'Lote'
+  else if InterfaceOrigem = Interfaces.DESCRICAONATOP then                  Texto := 'Descrição de Natureza de Operação'
+  else if InterfaceOrigem = Interfaces.VERIFICARDISPONIBILIDADELOCACAO then Texto := 'Indisponibilidade de Locação'
+  else if InterfaceOrigem = Interfaces.TERMINALVENDA then                   Texto := 'Terminal de Venda'
+  else if InterfaceOrigem = Interfaces.HISTORICORETORNO then                Texto := 'Histório de Retorno'
+  else if InterfaceOrigem = Interfaces.MAQUINA then                         Texto := 'Máquina'
+  else if InterfaceOrigem = Interfaces.COTACAOPRODUCAO then                 Texto := 'Cotação de Produto'
+  else if InterfaceOrigem = Interfaces.RESERVADOMATERIA then                Texto := 'Reserva de Matéria-Prima'
+  //else if InterfaceOrigem = Interfaces.IMPORTARWOCOMMERCE then              Texto := ''
+  else if InterfaceOrigem = Interfaces.ROTA then                            Texto := 'Rota'
+  else if InterfaceOrigem = Interfaces.MDE then                             Texto := 'MDe'
+  else if InterfaceOrigem = Interfaces.ATUALIZATABELAPRECO then             Texto := 'Atualização de preço'
+  else if InterfaceOrigem = Interfaces.CENTRODISTRIBUICAO then              Texto := 'Centro de Armazenamento'
+  else if InterfaceOrigem = Interfaces.MANUTENCAO then                      Texto := 'Manutenção'
+  //else if InterfaceOrigem = Interfaces.GERARPARCELAS then                 Texto := ''
+  else if InterfaceOrigem = Interfaces.PerfilDashBoard then                 Texto := 'Perfil DashBoard'
+  else if InterfaceOrigem = Interfaces.CentroCusto then                     Texto := 'Centro de Custo'
+  else if InterfaceOrigem = Interfaces.CAMPANHA then                        Texto := 'Campanha';
+
+  //InterfaceOrigem, FkMovimentacao, FkPessoa, Complemento: String;
+   }
+  if Trim(Texto) = '' then
+  begin
+    Result:= 'Relatório';
+    Exit;
+  end;
+
+  //*************
+    {
+  if (NomeArquivo <> '') then
+    Texto:= NomeArquivo;
+
+  if (Trim(FkMovimentacao) <> '') then // considera como selecionado
+  begin
+
+    case tipoAssuntoAnexo of
+      tAnexo : begin //pdf
+        Texto:= RemoverAcento(Texto);
+
+        Texto:= Texto + '.' + FkMovimentacao;
+
+        //Manutenção 9074
+        case Wusu.ConfiguracaoSistema.TipoAnexoEmail of
+          0 : Texto := Texto + '_' + RemoverAcento(Wusu.EmpresaLogada.NomeFantasiaEmpresa);
+          1 : if Trim(FkPessoa) <> '' then
+                Texto := Texto + '_' + RemoverAcento(BuscarNomeSacadoCedente(FkPessoa));
+        //2 : nao incluir
+        end;
+      end;
+      tAssunto : begin
+        if (InterfaceOrigem = Interfaces.NFSE)
+        or (InterfaceOrigem = Interfaces.NFE) then
+          Texto:= Texto + ' ' + NumeroFiscal
+        else
+          Texto:= Texto + ' ' + FkMovimentacao;
+
+        //Manutenção 7264
+        case Wusu.ConfiguracaoSistema.TipoAssuntoEmail of
+          0 : Texto := Texto + ' - ' + Wusu.EmpresaLogada.NomeFantasiaEmpresa;
+          1 : if Trim(FkPessoa) <> '' then
+                Texto := Texto + ' - ' + BuscarNomeSacadoCedente(FkPessoa);
+        end;
+      end;
+    end;
+
+  end
+  else
+  begin
+    if tipoAssuntoAnexo = tAnexo then //pdf
+      Texto:= RemoverAcento(Texto);
+  end;
+     }
+  Result:= Texto;
+
+
+end;
+
+function TFPreviewFR.VerificaBranco: Boolean;
+begin
+  Result:= False;
+
+  EdtDestinatarios.Color:= COR_EDITAVEL;
+  EdtAssunto.Color:= COR_EDITAVEL;
+  MemoMensagem.Color:= COR_EDITAVEL;
+
+  if Trim(EdtDestinatarios.Text) = '' then
+  begin
+    Application.MessageBox('É necessário preencher o campo "Destinatário"', 'Campo obrigatório', MB_ICONINFORMATION);
+    EdtDestinatarios.Color:= COR_VAZIO;
+    if EdtDestinatarios.CanFocus then
+      EdtDestinatarios.SetFocus;
+    Exit;
+  end;
+  if Trim(EdtAssunto.Text) = '' then
+  begin
+    Application.MessageBox('É necessário preencher o campo "Assunto"', 'Campo obrigatório', MB_ICONINFORMATION);
+    EdtAssunto.Color:= COR_VAZIO;
+    if EdtAssunto.CanFocus then
+      EdtAssunto.SetFocus;
+    Exit;
+  end;
+  if Trim(MemoMensagem.Text) = '' then
+  begin
+    Application.MessageBox('É necessário preencher o campo "Corpo da Mensagem"', 'Campo obrigatório', MB_ICONINFORMATION);
+    MemoMensagem.Color:= COR_VAZIO;
+    if MemoMensagem.CanFocus then
+      MemoMensagem.SetFocus;
+    Exit;
+  end;
+
+  Result:= True;
+end;
+
+end.
+

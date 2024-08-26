@@ -1,0 +1,33 @@
+object FPreviewFR: TFPreviewFR
+  Left = 0
+  Top = 0
+  Caption = 'FPreviewFR'
+  ClientHeight = 688
+  ClientWidth = 1166
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  PixelsPerInch = 96
+  TextHeight = 13
+  object frxPreview1: TfrxPreview
+    Left = 0
+    Top = 0
+    Width = 1166
+    Height = 688
+    Align = alClient
+    OutlineVisible = True
+    OutlineWidth = 121
+    ThumbnailVisible = False
+    FindFmVisible = False
+    UseReportHints = True
+    HideScrolls = False
+    ExplicitLeft = 536
+    ExplicitTop = 308
+    ExplicitWidth = 100
+    ExplicitHeight = 100
+  end
+end

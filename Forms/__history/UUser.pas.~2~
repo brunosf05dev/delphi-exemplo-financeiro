@@ -1,0 +1,398 @@
+unit UUser;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
+  Vcl.ComCtrls, Vcl.StdCtrls, Vcl.Buttons, Vcl.ExtCtrls, Data.DB, Vcl.Grids,
+  Vcl.DBGrids, Vcl.Mask;
+
+type
+  TFUser = class(TForm)
+    PButtons: TPanel;
+    BtnDelete: TBitBtn;
+    BtnClose: TBitBtn;
+    PData: TPanel;
+    PTitle: TPanel;
+    StatusBar1: TStatusBar;
+    BtnEdit: TBitBtn;
+    BtnNew: TBitBtn;
+    ImageLoc: TImage;
+    GData: TDBGrid;
+    MemoMensagem: TMemo;
+    CBFilter: TComboBox;
+    BtnSearch: TBitBtn;
+    Panel1: TPanel;
+    EdtFilter: TEdit;
+    PUser: TPanel;
+    Label1: TLabel;
+    Label4: TLabel;
+    lblUserPassword: TLabel;
+    PSubTitle: TPanel;
+    EdtPKUser: TEdit;
+    EdtUserName: TEdit;
+    EdtUserPassword: TEdit;
+    BtnSaveUser: TBitBtn;
+    BtnCancelUser: TBitBtn;
+    EdtUserRepeatPassword: TEdit;
+    lblUserRepeatPassword: TLabel;
+    BtnChangePassword: TBitBtn;
+    procedure BtnCloseClick(Sender: TObject);
+    procedure BtnSearchClick(Sender: TObject);
+    procedure EdtFilterKeyPress(Sender: TObject; var Key: Char);
+    procedure BtnNewClick(Sender: TObject);
+    procedure BtnSaveUserClick(Sender: TObject);
+    procedure EdtUserPasswordKeyPress(Sender: TObject; var Key: Char);
+    procedure BtnCancelUserClick(Sender: TObject);
+    procedure BtnEditClick(Sender: TObject);
+    procedure BtnDeleteClick(Sender: TObject);
+    procedure BtnChangePasswordClick(Sender: TObject);
+    procedure FormKeyPress(Sender: TObject; var Key: Char);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure FormActivate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+  private
+    UserControl : Integer;
+    ChangingPassword : Boolean;
+
+    { Private declarations }
+    procedure ClearFields;
+    procedure ShowUser(ControlIndex: integer);
+    procedure SaveUser(ControlIndex: integer);
+    procedure ButtonControl;
+    function VerifyPassword: Boolean;
+    function VerifyFields: Boolean;
+  public
+
+    { Public declarations }
+
+  end;
+
+var
+  FUser: TFUser;
+
+implementation
+
+{$R *.dfm}
+
+uses
+  UDM;
+
+procedure TFUser.BtnCancelUserClick(Sender: TObject);
+begin
+  PUser.Visible := False;
+  PData.Enabled := True;
+  PButtons.Enabled := True;
+end;
+
+procedure TFUser.BtnChangePasswordClick(Sender: TObject);
+begin
+  EdtUserPassword.Visible := True;
+  EdtUserRepeatPassword.Visible := True;
+  lblUserPassword.Visible := True;
+  lblUserRepeatPassword.Visible := True;
+  PUser.Height := 345;
+  ChangingPassword := True;
+end;
+
+procedure TFUser.BtnCloseClick(Sender: TObject);
+begin
+  Close;
+end;
+
+procedure TFUser.BtnDeleteClick(Sender: TObject);
+var
+  temp: string;
+begin
+  if Application.MessageBox('Deseja confirmar a exclusão do registro?',
+    'Exclusão', MB_YESNO + MB_ICONWARNING) = IDYES then
+  begin
+    try
+      Temp := '';
+
+      if DM.FDTransactionData.TransactionIntf.Active then
+        DM.FDTransactionData.Rollback;
+      DM.FDTransactionData.StartTransaction;
+
+      temp:= 'DELETE FROM TB_User WHERE PK_User = ' + dm.SQLUser.FieldByName('PK_User').AsString;
+
+      PM.RunSQL(temp, DM.SQLData);
+      DM.FDTransactionData.Commit;
+    Except
+      if DM.FDTransactionData.TransactionIntf.Active then
+        DM.FDTransactionData.Rollback;
+      ShowMessage('Ocorreu um erro ao excluir!');
+      Exit;
+    end;
+
+    ShowMessage('Registro excluído com sucesso!');
+
+    EdtFilter.Text := '';
+    BtnSearchClick(nil);
+  end;
+
+
+end;
+
+procedure TFUser.BtnEditClick(Sender: TObject);
+begin
+  PUser.Visible := True;
+  PM.CentralizePanel(Self, PUser);
+  ShowUser(1);
+  PData.Enabled := False;
+  PButtons.Enabled := False;
+end;
+
+procedure TFUser.BtnNewClick(Sender: TObject);
+begin
+  PUser.Visible := True;
+  PM.CentralizePanel(Self, PUser);
+  ShowUser(0);
+  PData.Enabled := False;
+  PButtons.Enabled := False;
+end;
+
+procedure TFUser.BtnSaveUserClick(Sender: TObject);
+begin
+  if VerifyFields = False then
+  begin
+    ShowMessage('Há campos que precisam ser preenchidos. Todos os campos são obrigatórios!');
+    Exit;
+  end;
+  if VerifyPassword then
+  begin
+    if Application.MessageBox('Deseja salvar os dados?', 'Salvar', MB_YESNO +
+      MB_ICONQUESTION) = IDNO then
+    begin
+      exit;
+    end;
+
+    SaveUser(UserControl);
+    UserControl := -1;
+  end
+  else
+  begin
+    ShowMessage('As digitadas senhas não coincidem! Verifique ambas e tente novamente');
+  end;
+
+
+end;
+
+procedure TFUser.BtnSearchClick(Sender: TObject);
+var
+  temp, where: string;
+begin
+  temp := 'SELECT * FROM TB_User U';
+  where := '';
+
+  if EdtFilter.Text <> '' then
+  begin
+    case CBFilter.ItemIndex of
+      0:
+        where := ' WHERE U.PK_User = ' + EdtFilter.Text;
+      1:
+        where := ' WHERE UPPER(U.User_Name) = UPPER(' + QuotedStr('%' + EdtFilter.Text + '%') + ')';
+    end;
+  end;
+
+  temp := temp + where;
+
+  PM.RunSQL(temp, dm.SQLUser);
+  ButtonControl;
+
+end;
+
+procedure TFUser.ButtonControl;
+begin
+
+  if DM.SQLUser.Active = True then
+  begin
+    if DM.SQLUser.FieldByName('PK_User').AsString <> '' then
+    begin
+      BtnEdit.Enabled := True;
+      BtnDelete.Enabled := True;
+    end
+  end
+  else
+  begin
+    BtnEdit.Enabled := False;
+    BtnDelete.Enabled := False;
+  end;
+
+end;
+
+procedure TFUser.ClearFields;
+begin
+  EdtPKUser.Text := '';
+  EdtUserName.Text := '';
+  EdtUserPassword.Text := '';
+  EdtUserRepeatPassword.Text := '';
+end;
+
+procedure TFUser.EdtFilterKeyPress(Sender: TObject; var Key: Char);
+begin
+  if CBFilter.ItemIndex = 0 then
+    Key := PM.ClearEdit(Sender as TCustomEdit, Key);
+end;
+
+procedure TFUser.EdtUserPasswordKeyPress(Sender: TObject; var Key: Char);
+begin
+  Key:= PM.ClearEdit(Sender as TCustomEdit, Key, ',');
+end;
+
+procedure TFUser.FormActivate(Sender: TObject);
+begin
+  ButtonControl;
+end;
+
+procedure TFUser.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  DM.SQLuser.Close;
+
+  FUser:= nil;
+  Action:= caFree;
+end;
+
+procedure TFUser.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if PUser.Visible = False then
+  begin
+    case Key of
+      VK_INSERT : if BtnNew.Enabled then
+                    BtnNewClick(nil);
+          VK_F2 : if BtnEdit.Enabled then
+                    BtnEditClick(nil);
+      VK_DELETE : if BtnDelete.Enabled then
+                    BtnDeleteClick(nil);
+          VK_F3 : if PButtons.Enabled then
+                    BtnSearchClick(nil);
+    end;
+  end;
+end;
+
+procedure TFUser.FormKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = #27 then
+  begin
+    Key:= #0;
+    if PUser.Visible then
+      BtnCancelUserClick(nil)
+    else
+      Close;
+  end;
+
+  if Key = #13 then
+  begin
+    Key:= #0;
+
+    if PUser.Visible then
+    begin
+      if ((UserControl = 0) and (EdtUserName.Text <> '') and (EdtUserPassword.Text <> '') and (EdtUserRepeatPassword.Text <> '')) then
+      begin
+        BtnSaveUserClick(nil);
+      end
+      else if ((UserControl = 1) and (ChangingPassword = False) and (EdtUserName.Text  <> '')) then
+      begin
+        BtnSaveUserClick(nil);
+      end
+      else if ((UserControl = 1) and (ChangingPassword) and (EdtUserName.Text  <> '') and (EdtUserPassword.Text <> '') and (EdtUserRepeatPassword.Text <> '')) then
+      begin
+        BtnSaveUserClick(nil);
+      end
+      else
+        Perform(Wm_NextDlgCtl,0,0);
+    end
+    else
+      Perform(Wm_NextDlgCtl,0,0);
+  end;
+end;
+
+procedure TFUser.SaveUser(ControlIndex: integer);
+var
+  temp: string;
+begin
+  try
+    Temp := '';
+
+    if DM.FDTransactionData.TransactionIntf.Active then
+      DM.FDTransactionData.Rollback;
+    DM.FDTransactionData.StartTransaction;
+
+    case UserControl of
+      0 : begin
+            temp:= 'INSERT INTO TB_User (User_NAME, USER_PASSWORD) VALUES ('
+                 +  QuotedStr(EdtUserName.Text) + ','
+                 +  QuotedStr(PM.GetMD5(EdtUserPassword.Text)) + ')'
+          end;
+      1 : begin
+            temp:= 'UPDATE TB_User SET'
+                 + ' User_NAME = ' + QuotedStr(EdtUserName.Text)
+                 + ' ,User_Password = ' + QuotedStr(PM.GetMD5(EdtUserPassword.Text))
+                 + ' WHERE PK_User = ' + EdtPkUser.Text;
+          end;
+    end;
+
+    PM.RunSQL(temp, DM.SQLData);
+    DM.FDTransactionData.Commit;
+  Except
+    if DM.FDTransactionData.TransactionIntf.Active then
+      DM.FDTransactionData.Rollback;
+    ShowMessage('Ocorreu um erro ao salvar os dados!');
+    Exit;
+  end;
+
+  ShowMessage('Dados salvos com sucesso!');
+  ClearFields;
+  BtnCancelUserClick(nil);
+  EdtFilter.Text := '';
+  BtnSearchClick(nil);
+end;
+
+procedure TFUser.ShowUser(ControlIndex: integer);
+begin
+  UserControl := ControlIndex;
+  ClearFields;
+  ChangingPassword := False;
+  case ControlIndex of
+    0:  begin
+          PUser.Height := 345;
+          EdtPKUser.Text := 'Não Registrado';
+          PSubTitle.Caption := 'CADASTRAR USUÁRIO';
+          lblUserPassword.Visible := True;
+          lblUserRepeatPassword.Visible := True;
+          EdtUserPassword.Visible := True;
+          EdtUserRepeatPassword.Visible := True;
+          BtnChangePassword.Visible := False;
+        end;
+    1:  begin
+          PUser.Height := 255;
+          EdtPKUser.Text := DM.SQLUser.FieldByName('pk_User').AsString;
+          EdtUserName.Text := DM.SQLUser.FieldByName('User_name').AsString;
+          EdtUserPassword.Visible := False;
+          EdtUserRepeatPassword.Visible := False;
+          lblUserPassword.Visible := False;
+          lblUserRepeatPassword.Visible := False;
+          BtnChangePassword.Visible := True;
+        end;
+  end;
+end;
+
+function TFUser.VerifyFields: Boolean;
+begin
+  Result := True;
+
+  if ((EdtUserName.Text = '') or (((UserControl = 0) or (ChangingPassword)) and (EdtUserPassword.Text = '')) ) then
+    Result:= False;
+end;
+
+function TFUser.VerifyPassword: Boolean;
+begin
+  Result := True;
+  if (((UserControl = 0) or (ChangingPassword)) and (EdtUserPassword.Text <> EdtUserRepeatPassword.text)) then
+    Result := False;
+
+end;
+
+end.
+

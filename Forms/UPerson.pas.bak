@@ -1,0 +1,641 @@
+unit ULocCentroTrabalho;
+
+interface
+
+uses
+  Cores, Imagens, Interfaces, Metodos, CustonCHCEdit, UBloqueio,
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls, Vcl.Buttons, Vcl.ExtCtrls,
+  Data.DB, Vcl.Grids, Vcl.DBGrids, Vcl.Mask;
+
+type
+  TFLocCentroTrabalho = class(TForm)
+    PBotoes: TPanel;
+    BtnExcluir: TBitBtn;
+    BtnFechar: TBitBtn;
+    BtnRelatorio: TBitBtn;
+    PDados: TPanel;
+    PTitulo: TPanel;
+    StatusBar1: TStatusBar;
+    BtnAlterar: TBitBtn;
+    BtnNovo: TBitBtn;
+    BtnVisualizar: TBitBtn;
+    ImageLoc: TImage;
+    GDados: TDBGrid;
+    MemoMensagem: TMemo;
+    PSenha: TPanel;
+    Label13: TLabel;
+    Label14: TLabel;
+    Panel3: TPanel;
+    EdtLogin: TEdit;
+    EdtSenha: TEdit;
+    BtnSenhaOK: TBitBtn;
+    BtnSenhaCancelar: TBitBtn;
+    CkBoxPermanecerLogado: TCheckBox;
+    CBLoc: TComboBox;
+    MEdtLoc: TChriscadEdit;
+    BtnPesquisar: TBitBtn;
+    Panel1: TPanel;
+    CBAtivo: TComboBox;
+    procedure BtnFecharClick(Sender: TObject);
+    procedure FormKeyPress(Sender: TObject; var Key: Char);
+    procedure BtnNovoClick(Sender: TObject);
+    procedure BtnAlterarClick(Sender: TObject);
+    procedure BtnVisualizarClick(Sender: TObject);
+    procedure BtnExcluirClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormCreate(Sender: TObject);
+    procedure GDadosTitleClick(Column: TColumn);
+    procedure GDadosKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure GDadosDblClick(Sender: TObject);
+    procedure BtnSenhaOKClick(Sender: TObject);
+    procedure BtnSenhaCancelarClick(Sender: TObject);
+    procedure BtnRelatorioClick(Sender: TObject);
+    procedure CBLocChange(Sender: TObject);
+    procedure MEdtLocKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure MEdtLocChange(Sender: TObject);
+    procedure BtnPesquisarClick(Sender: TObject);
+    procedure GDadosDrawColumnCell(Sender: TObject; const Rect: TRect; DataCol: Integer;
+      Column: TColumn; State: TGridDrawState);
+    procedure FormActivate(Sender: TObject);
+    procedure MEdtLocKeyPress(Sender: TObject; var Key: Char);
+  private
+    ModificouPesquisa: Boolean;
+    OrdemGrid, Ordem: String;
+    IndiceGrid: Integer;
+    { Private declarations }
+    procedure InicializarComponentes;
+    procedure ExibirMensagem;
+    procedure HabilitarTela(Valor: Boolean);
+    procedure Excluir;
+    procedure ControlarBotoes;
+    procedure ConfigurarGrid(Create : Boolean);
+    procedure ShowConfiguracaoGrid;
+  public
+    LocCentroTrabalho: Integer;
+    { Public declarations }
+    procedure LocalizarPorCodigo(PK: String);
+  end;
+
+var
+  FLocCentroTrabalho: TFLocCentroTrabalho;
+  //não criar variaveis globais
+
+implementation
+
+{$R *.dfm}
+
+uses UDM, UDMImagens, UCadCentroTrabalho, UImpListagem, UCadBem, ULocBem, GridsInterfaces, UConfiguracaoGrid;
+
+procedure TFLocCentroTrabalho.BtnPesquisarClick(Sender: TObject);
+var
+  X, Y: String;
+begin
+  X:= 'select PKCentroTrabalho, DESCRICAO, REFERENCIACENTROTRABALHO from tbCentroTrabalho';
+
+  Y:= MEdtLoc.DevolveSQL;
+
+  if Y <> '' then
+  begin
+    case CBAtivo.ItemIndex of
+      1: Y:= Y + ' and ativo = 1';
+      2: Y:= Y + ' and ativo = 0';
+    end;
+    X:= X + ' where ' + Y;
+  end
+  else
+  begin
+    case CBAtivo.ItemIndex of
+      1: Y:= ' where ativo = 1';
+      2: Y:= ' where ativo = 0';
+    end;
+    X:= X + Y;
+  end;
+
+  if (OrdemGrid <> '') and (Ordem <> '') then
+  begin
+    if UpperCase(OrdemGrid) = UpperCase('PKCentroTrabalho') then
+      X:= X + ' order by ' + OrdemGrid + ' ' + Ordem
+    else
+      X:= X + ' order by upper(' + OrdemGrid + ') ' + Ordem;
+  end;
+
+  try
+    vr.ExecutarSQL(X, DM.SQLCentroTrabalho);
+  finally
+    ControlarBotoes;
+  end;
+end;
+
+procedure TFLocCentroTrabalho.BtnAlterarClick(Sender: TObject);
+var
+  Retorno: TBloqueado;
+begin
+  Retorno:= Bloqueio.VerificarBloqueio('tbCentroTrabalho', 'PKCentroTrabalho', DM.SQLCentroTrabalho.FieldByName('PKCentroTrabalho').AsString);
+  if (Retorno.Bloqueio) then
+    if not(Bloqueio.DesbloquearAvisoRegistro(Retorno)) then
+      Exit;
+
+  if FCadCentroTrabalho = nil then
+    Application.CreateForm(TFCadCentroTrabalho, FCadCentroTrabalho);
+  FCadCentroTrabalho.ExibirDados(1, DM.SQLCentroTrabalho.FieldByName('PKCentroTrabalho').AsString);
+  FCadCentroTrabalho.ShowModal;
+end;
+
+procedure TFLocCentroTrabalho.BtnExcluirClick(Sender: TObject);
+begin
+  if Application.MessageBox('Deseja excluir o centro de trabalho selecionado?', 'Excluindo', MB_ICONQUESTION + MB_YESNO) = 7 then
+    Exit;
+
+  BtnSenhaOK.Enabled:= True;
+  EdtLogin.Text:= Usuario.Login;
+  EdtSenha.Text:= '';
+
+  HabilitarTela(False);
+  vr.CentralizarPanel(Self, PSenha);
+  if Usuario.PermanecerLogado then
+  begin
+    CkBoxPermanecerLogado.Checked:= Usuario.PermanecerLogado;
+    EdtSenha.Text:= Usuario.Senha;
+    BtnSenhaOKClick(nil);
+  end
+  else
+  begin
+    PSenha.Visible:= True;
+    if EdtSenha.CanFocus then
+      EdtSenha.SetFocus;
+  end;
+end;
+
+procedure TFLocCentroTrabalho.BtnFecharClick(Sender: TObject);
+begin
+  Close;
+end;
+
+procedure TFLocCentroTrabalho.BtnNovoClick(Sender: TObject);
+begin
+  if FCadCentroTrabalho = nil then
+    Application.CreateForm(TFCadCentroTrabalho, FCadCentroTrabalho);
+  FCadCentroTrabalho.ExibirDados(0);
+  FCadCentroTrabalho.ShowModal;
+  if LocCentroTrabalho <> 0 then
+    GDadosDblClick(nil);
+end;
+
+procedure TFLocCentroTrabalho.BtnRelatorioClick(Sender: TObject);
+begin
+  if ModificouPesquisa = True then
+    BtnPesquisar.Click;
+
+  if FImpListagem = nil then
+    Application.CreateForm(TFImpListagem, FImpListagem);
+  FImpListagem.BuscarListaRelatorios(Interfaces.CentroTrabalho);
+  FImpListagem.MemoMensagem.Lines.Text:= MemoMensagem.Lines.Text;
+  FImpListagem.ShowModal;
+end;
+
+procedure TFLocCentroTrabalho.BtnSenhaCancelarClick(Sender: TObject);
+begin
+  EdtSenha.Text:= '';
+  HabilitarTela(True);
+  PSenha.Visible:= False;
+end;
+
+procedure TFLocCentroTrabalho.BtnSenhaOKClick(Sender: TObject);
+var
+  X: String;
+begin
+  X:= 'select u.pkcodusu, p.CentroTrabalho from tbusuario u'
+    + ' inner join tbperfil p on (u.fkperfil = p.pkperfil)'
+    + ' where u.login = ' + QuotedStr(EdtLogin.Text)
+    + ' and u.senha = ' + QuotedStr(vr.GetMD5(EdtSenha.Text));
+  vr.ExecutarSQL(X, DM.SQLGeral);
+  if DM.SQLGeral.FieldByName('pkcodusu').AsString = '' then
+  begin
+    ShowMessage('Usuário ou senha inválido');
+    PSenha.Visible:= True;
+    Exit;
+  end;
+
+  X:= DM.SQLGeral.FieldByName('CentroTrabalho').AsString;
+  Usuario.PkUsuarioSenha:= DM.SQLGeral.FieldByName('pkcodusu').AsString;
+  if (X[4] = '0') then
+  begin
+    ShowMessage('Usuário sem permissão para esta ação');
+    PSenha.Visible:= True;
+    Exit;
+  end;
+
+  BtnSenhaOK.Enabled:= False;
+  Excluir;
+  Usuario.PermanecerLogado:= CkBoxPermanecerLogado.Checked;
+  BtnSenhaCancelarClick(nil);
+end;
+
+procedure TFLocCentroTrabalho.BtnVisualizarClick(Sender: TObject);
+begin
+  if FCadCentroTrabalho = nil then
+    Application.CreateForm(TFCadCentroTrabalho, FCadCentroTrabalho);
+  FCadCentroTrabalho.ExibirDados(2, DM.SQLCentroTrabalho.FieldByName('PKCentroTrabalho').AsString);
+  FCadCentroTrabalho.ShowModal;
+end;
+
+procedure TFLocCentroTrabalho.CBLocChange(Sender: TObject);
+begin
+  MEdtLoc.LimpaLista;
+  MEdtLoc.Text:= '';
+
+  case CBLoc.ItemIndex of
+    0 : begin
+          MEdtLoc.TextoString:= 'código ' + MEdtLoc.Text;
+          MEdtLoc.TipoAtributo:= TaInteger;
+          MEdtLoc.ParaNumero:= PNIgual;
+          MEdtLoc.Atributo:= 'PKCENTROTRABALHO';
+        end;
+    1 : begin
+          MEdtLoc.TextoString:= 'referência ' + MEdtLoc.Text;
+          MEdtLoc.TipoAtributo:= TaString;
+          MEdtLoc.ParaString:= PsInicie;
+          MEdtLoc.Atributo:= 'REFERENCIACENTROTRABALHO';
+        end;
+    2 : begin
+          MEdtLoc.TextoString:= 'referência ' + MEdtLoc.Text;
+          MEdtLoc.TipoAtributo:= TaString;
+          MEdtLoc.ParaString:= PsContenha;
+          MEdtLoc.Atributo:= 'REFERENCIACENTROTRABALHO';
+        end;
+    3 : begin
+          MEdtLoc.TextoString:= 'descrição ' + MEdtLoc.Text;
+          MEdtLoc.TipoAtributo:= TaString;
+          MEdtLoc.ParaString:= PsInicie;
+          MEdtLoc.Atributo:= 'DESCRICAO';
+        end;
+    4 : begin
+          MEdtLoc.TextoString:= 'descrição ' + MEdtLoc.Text;
+          MEdtLoc.TipoAtributo:= TaString;
+          MEdtLoc.ParaString:= PsContenha;
+          MEdtLoc.Atributo:= 'DESCRICAO';
+        end;
+  end;
+
+  DM.SQLCentroTrabalho.Active:= False;
+  ControlarBotoes;
+  ExibirMensagem;
+end;
+
+procedure TFLocCentroTrabalho.ConfigurarGrid(Create: Boolean);
+begin
+  GI.Carregar(GDados, GRID_CENTROTRABALHO, Create);
+end;
+
+procedure TFLocCentroTrabalho.ControlarBotoes;
+begin
+  ModificouPesquisa:= False;
+  ExibirMensagem;
+
+  BtnNovo.Enabled:= True;
+  BtnAlterar.Enabled:= False;
+  BtnVisualizar.Enabled:= False;
+  BtnExcluir.Enabled:= False;
+  BtnRelatorio.Enabled:= False;
+  BtnFechar.Enabled:= True;
+
+  if DM.SQLCentroTrabalho.Active = False Then
+  begin
+    BtnNovo.Enabled:= vr.StrToBoolean(Usuario.CentroTrabalho[2]);
+    Exit;
+  end;
+  if DM.SQLCentroTrabalho.FieldByName('PKCentroTrabalho').AsString = '' then
+  begin
+    BtnExcluir.Enabled:= False;
+    BtnAlterar.Enabled:= False;
+    BtnRelatorio.Enabled:= False;
+    BtnVisualizar.Enabled:= False;
+  end
+  else
+  begin
+    BtnExcluir.Enabled:= True;
+    BtnAlterar.Enabled:= True;
+    BtnRelatorio.Enabled:= True;
+    BtnVisualizar.Enabled:= true;
+  end;
+
+  if (BtnNovo.Enabled = True) and (Usuario.CentroTrabalho[2] = '0') then
+    BtnNovo.Enabled:= False;
+  if (BtnAlterar.Enabled = True) and (Usuario.CentroTrabalho[3] = '0') then
+    BtnAlterar.Enabled:= False;
+  if (BtnVisualizar.Enabled = True) and (Usuario.CentroTrabalho[4] = '0') then
+    BtnVisualizar.Enabled:= False;
+  if (BtnExcluir.Enabled = True) and (Usuario.CentroTrabalho[5] = '0') then
+    BtnExcluir.Enabled:= False;
+  if (BtnRelatorio.Enabled = True) and (Usuario.CentroTrabalho[6] = '0') then
+    BtnRelatorio.Enabled:= False;
+end;
+
+procedure TFLocCentroTrabalho.GDadosDblClick(Sender: TObject);
+begin
+  if (Usuario.CentroTrabalho[6] = '0') then
+    Exit;
+
+  if DM.SQLCentroTrabalho.Active = False then
+    Exit;
+  if (DM.SQLCentroTrabalho.FieldByName('PKCentroTrabalho').AsString = '') then
+    Exit;
+
+  case LocCentroTrabalho of
+    0 : BtnVisualizarClick(nil);
+    1 : begin
+          if FCadBem <> nil then
+            with FCadBem do
+            begin
+              CarregarCentroTrabalho;
+              CBFkCentroTrabalho.ItemIndex:= CBFkCentroTrabalho.Items.IndexOf(DM.SQLCentroTrabalho.fieldbyname('pkCentroTrabalho').AsString);
+              CBFkCentroTrabalhoChange(nil);
+              Perform(Wm_NextDlgCtl, 0, 0);
+            end;
+          Close;
+        end;
+    2 : begin
+          if FLocBem <> nil then
+            with FLocBem do
+            begin
+              CarregarCentroTrabalho;
+              CBFkCentroTrabalho.ItemIndex := CBFkCentroTrabalho.Items.IndexOf(DM.SQLCentroTrabalho.fieldbyname('pkCentroTrabalho').AsString);
+              CBFkCentroTrabalhoChange(nil);
+              Perform(Wm_NextDlgCtl, 0, 0);
+            end;
+          Close;
+        end;
+  end;
+end;
+
+procedure TFLocCentroTrabalho.GDadosDrawColumnCell(Sender: TObject; const Rect: TRect; DataCol: Integer;
+  Column: TColumn; State: TGridDrawState);
+begin
+  with (Sender as TDBGrid) do
+  begin
+    if odd((Sender as TDBGrid).DataSource.DataSet.RecNo) then
+    begin
+      Canvas.Brush.Color:= COLUNA_ZEB_COR_A;
+      Canvas.Font.Color:= COLUNA_ZEB_FON_A;
+    end
+    else
+    begin
+      Canvas.Brush.Color:= COLUNA_ZEB_COR_B;
+      Canvas.Font.Color:= COLUNA_ZEB_FON_B;
+    end;
+
+    if Column.Index = IndiceGrid then
+    begin
+      Canvas.Brush.Color:= COLUNA_SEL_COR;
+      Canvas.Font.Color:= COLUNA_SEL_FON;
+    end;
+
+    if gdSelected in State then
+    begin
+      Canvas.Brush.Color:= COR_SELECIONADO;
+      Canvas.Font.Color:= clWhite;
+    end;
+
+    Options:= Options + [dgRowSelect];
+    DefaultDrawColumnCell(Rect, DataCol, Column, State);
+  end;
+end;
+
+procedure TFLocCentroTrabalho.GDadosKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if (Shift = [ssCtrl]) and (Key = 46) Then
+    Key:= 0;
+end;
+
+procedure TFLocCentroTrabalho.GDadosTitleClick(Column: TColumn);
+var
+  C, O: String;
+begin
+  C:= Column.FieldName;
+  IndiceGrid:= Column.Index;
+  Application.ProcessMessages;
+
+  if OrdemGrid <> C then
+    O:= ' Asc'
+  else
+  begin
+    if Ordem = ' Desc' then
+      O:= ' Asc'
+    else
+      O:= ' Desc';
+  end;
+  OrdemGrid:= C;
+  Ordem:= O;
+
+  BtnPesquisarClick(nil);
+end;
+
+procedure TFLocCentroTrabalho.ExibirMensagem;
+var
+  X, Y: String;
+begin
+  X:= 'Todos centros de trabalho';
+
+  Y:= MEdtLoc.DevolveMensagem;
+  if (Y <> '') then
+    X:= X + ' onde ' + Y;
+
+  if OrdemGrid <> '' then
+  begin
+    if Trim(UpperCase(Ordem)) = 'ASC' then
+      X:= X + ' em ordem crescente de '
+    else
+      X:= X + ' em ordem decrescente de ';
+
+    if Trim(UpperCase(OrdemGrid)) = Trim(UpperCase('PKCentroTrabalho')) then X:= X + 'código';
+    if Trim(UpperCase(OrdemGrid)) = Trim(UpperCase('DESCRICAO')) then X:= X + 'descriçao';
+    if Trim(UpperCase(OrdemGrid)) = Trim(UpperCase('REFERENCIACentroTrabalho')) then X:= X + 'referência';
+  end;
+
+  MemoMensagem.Lines.Text:= X;
+end;
+
+procedure TFLocCentroTrabalho.Excluir;
+var
+  M, X, Cod: String;
+begin
+  M:= 'Deseja realmente excluir o centro de trabalho ' + QuotedStr(DM.SQLCentroTrabalho.FieldByName('DESCRICAO').AsString) + '?';
+  if Application.MessageBox(PChar(M), 'Excluindo', MB_ICONEXCLAMATION + MB_YESNO) = 7 then
+    Exit;
+
+  Cod:= DM.SQLCentroTrabalho.FieldByName('PKCentroTrabalho').AsString;
+
+  try
+    if DM.FDTransModifica.TransactionIntf.Active then
+      DM.FDTransModifica.Rollback;
+    DM.FDTransModifica.StartTransaction;
+    DM.SQLCentroTrabalho.Active:= False;
+
+    X:= 'delete from tbCentroTrabalho where pkCentroTrabalho = ' + QuotedStr(Cod);
+    vr.ExecutarSQL(X, DM.SQLModifica);
+
+    X:= vr.RetornaInsertLog(Usuario.PkUsuarioSenha, Interfaces.CentroTrabalho, Metodos.EXCLUIR, 'CentroTrabalho: ' + Cod);
+    vr.ExecutarSQL(X, DM.SQLModifica);
+
+    DM.FDTransModifica.Commit;
+    DM.SQLCentroTrabalho.Active:= True;
+  except on E: Exception do
+    begin
+      DM.FDTransModifica.Rollback;
+      if Pos('FOREIGN KEY', E.Message) > 0 then
+        Application.MessageBox('Impossível de excluir este registro, pois ele está relacionado a outro', 'Erro', MB_ICONERROR)
+      else
+        Raise Exception.Create(PChar('Ocorreu o seguinte erro ao tentar excluir os dados.' + #13 + E.Message));
+    end;
+  end;
+
+  ControlarBotoes;
+end;
+
+procedure TFLocCentroTrabalho.FormActivate(Sender: TObject);
+begin
+  if (Trim(MEdtLoc.Text) <> '') and (MEdtLoc.CanFocus) then
+    MEdtLoc.SetFocus;
+end;
+
+procedure TFLocCentroTrabalho.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Usuario.Default.CentroTrabalhoLoc:= CBLoc.ItemIndex;
+  DM.SQLCentroTrabalho.Close;
+
+  FLocCentroTrabalho:= nil;
+  Action:= caFree;
+end;
+
+procedure TFLocCentroTrabalho.FormCreate(Sender: TObject);
+begin
+  InicializarComponentes;
+  vr.AjustarForm(Self);
+end;
+
+procedure TFLocCentroTrabalho.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  case Key of
+    VK_INSERT : if BtnNovo.Enabled then
+                  BtnNovoClick(nil);
+        VK_F2 : if BtnAlterar.Enabled then
+                  BtnAlterarClick(nil);
+    VK_DELETE : if BtnExcluir.Enabled then
+                  BtnExcluirClick(nil);
+        VK_F3 : if PBotoes.Enabled then
+                  BtnPesquisarClick(nil);
+  end;
+
+  if (Shift = [ssCtrl,ssAlt]) and (Key = 71) Then
+    ShowConfiguracaoGrid;
+end;
+
+procedure TFLocCentroTrabalho.FormKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key in ['''', '"', '#'] then
+  begin
+    Key:= #0;
+  end;
+
+  if Key = #13 then
+  begin
+    Key:= #0;
+    if PBotoes.Enabled then
+    begin
+      if LocCentroTrabalho <> 0 then
+        GDadosDblClick(nil)
+      else if PSenha.Visible then
+        BtnSenhaOKClick(nil)
+      else
+        BtnPesquisarClick(nil);
+    end
+    else
+      Perform(Wm_NextDlgCtl,0,0);
+  end;
+
+  if Key = #27 then
+  begin
+    Key:= #0;
+    if PSenha.Visible then
+      BtnSenhaCancelarClick(nil)
+    else
+      Close;
+  end;
+end;
+
+procedure TFLocCentroTrabalho.HabilitarTela(Valor: Boolean);
+begin
+  PDados.Enabled:= Valor;
+  PBotoes.Enabled:= Valor;
+end;
+
+procedure TFLocCentroTrabalho.InicializarComponentes;
+begin
+  DM.Grid_Original := nil;
+  ConfigurarGrid(True);
+  DMImagens.ImgLstIcones.GetBitmap(Imagens.CentroTrabalho, ImageLoc.Picture.Bitmap);
+  FLocCentroTrabalho.Caption:= 'Localizar Centros de Trabalho';
+  PTitulo.Caption:= 'CENTROS DE TRABALHO';
+
+  IndiceGrid:= -1;
+  CBLoc.ItemIndex:= Usuario.Default.CentroTrabalhoLoc;
+  CBLocChange(nil);
+  ControlarBotoes;
+end;
+
+procedure TFLocCentroTrabalho.LocalizarPorCodigo(PK: String);
+begin
+  CBLoc.ItemIndex:= 0;
+  CBLocChange(nil);
+  MEdtLoc.Text:= PK;
+  BtnPesquisarClick(nil);
+end;
+
+procedure TFLocCentroTrabalho.MEdtLocChange(Sender: TObject);
+begin
+  ExibirMensagem;
+  ModificouPesquisa:= True;
+
+  if (Trim(MEdtLoc.Text) <> '') and (DM.SQLCentroTrabalho.Active = True) then
+    case CBLoc.ItemIndex of
+      0 : DM.SQLCentroTrabalho.Locate('pkcentrotrabalho', MEdtLoc.Text, []);
+    1,2 : DM.SQLCentroTrabalho.Locate('referenciacentrotrabalho', MEdtLoc.Text, [LopartialKey, LocaseInsensitive]);
+    3,4 : DM.SQLCentroTrabalho.Locate('DESCRICAO', MEdtLoc.Text, [LopartialKey, LocaseInsensitive]);
+    end;
+end;
+
+procedure TFLocCentroTrabalho.MEdtLocKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if DM.SQLCentroTrabalho.Active = False then
+    Exit;
+
+  case Key of
+    VK_Down: begin
+               DM.SQLCentroTrabalho.Next;
+               Key:= 0;
+             end;
+    VK_Up:   begin
+               DM.SQLCentroTrabalho.Prior;
+               Key:= 0;
+             end;
+  end;
+end;
+
+procedure TFLocCentroTrabalho.MEdtLocKeyPress(Sender: TObject; var Key: Char);
+begin
+  if MEdtLoc.TipoAtributo = TaInteger then
+    Key := vr.LimpaEdit(Sender as TCustomEdit, Key);
+end;
+
+procedure TFLocCentroTrabalho.ShowConfiguracaoGrid;
+begin
+  if FConfiguracaoGrid = nil then
+    Application.CreateForm(TFConfiguracaoGrid, FConfiguracaoGrid);
+  FConfiguracaoGrid.Carregar(GDados, GRID_CENTROTRABALHO, Self.Caption);
+  FConfiguracaoGrid.ShowModal;
+  ConfigurarGrid(False);
+end;
+
+end.

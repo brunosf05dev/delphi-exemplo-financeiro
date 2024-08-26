@@ -1,0 +1,486 @@
+unit UFinancialTransaction;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
+  Vcl.ComCtrls, Vcl.StdCtrls, Vcl.Buttons, Vcl.ExtCtrls, Data.DB, Vcl.Grids,
+  Vcl.DBGrids, Vcl.Mask;
+
+type
+  TFFinancialTransaction = class(TForm)
+    PButtons: TPanel;
+    BtnDelete: TBitBtn;
+    BtnClose: TBitBtn;
+    PData: TPanel;
+    PTitle: TPanel;
+    StatusBar1: TStatusBar;
+    BtnNew: TBitBtn;
+    ImageLoc: TImage;
+    GData: TDBGrid;
+    MemoMensagem: TMemo;
+    CBFilter: TComboBox;
+    BtnSearch: TBitBtn;
+    Panel1: TPanel;
+    EdtFilter: TEdit;
+    PFinancialTransaction: TPanel;
+    Label1: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    PSubTitle: TPanel;
+    EdtPKFinancialTransaction: TEdit;
+    EdtTransactionValue: TEdit;
+    BtnSaveFinancialTransaction: TBitBtn;
+    BtnCancelFinancialTransaction: TBitBtn;
+    Label2: TLabel;
+    RGTransactionType: TRadioGroup;
+    CBPersonName: TComboBox;
+    CBPKPerson: TComboBox;
+    CBPersonBalance: TComboBox;
+    Label3: TLabel;
+    Label6: TLabel;
+    lblCurrentBalance: TLabel;
+    lblNewBalance: TLabel;
+    MEdtTransactionDate: TMaskEdit;
+    Label82: TLabel;
+    Label7: TLabel;
+    Label8: TLabel;
+    DTStartDate: TDateTimePicker;
+    DTFinalDate: TDateTimePicker;
+    RGOrder: TRadioGroup;
+    RGOrientation: TRadioGroup;
+    BtnReport: TBitBtn;
+    procedure BtnCloseClick(Sender: TObject);
+    procedure BtnSearchClick(Sender: TObject);
+    procedure EdtFilterKeyPress(Sender: TObject; var Key: Char);
+    procedure BtnNewClick(Sender: TObject);
+    procedure BtnSaveFinancialTransactionClick(Sender: TObject);
+    procedure EdtTransactionValueKeyPress(Sender: TObject; var Key: Char);
+    procedure BtnCancelFinancialTransactionClick(Sender: TObject);
+    procedure BtnEditClick(Sender: TObject);
+    procedure BtnDeleteClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure FormKeyPress(Sender: TObject; var Key: Char);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormActivate(Sender: TObject);
+    procedure CBPersonNameChange(Sender: TObject);
+    procedure EdtTransactionValueExit(Sender: TObject);
+    procedure MEdtTransactionDateExit(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure BtnReportClick(Sender: TObject);
+    procedure GDataDrawColumnCell(Sender: TObject; const Rect: TRect; DataCol: Integer; Column: TColumn;
+      State: TGridDrawState);
+  private
+    FinancialTransactionControl : Integer;
+
+    { Private declarations }
+    procedure ClearFields;
+    procedure ShowFinancialTransaction(ControlIndex: integer);
+    procedure SaveFinancialTransaction(ControlIndex: integer);
+    procedure ButtonControl;
+    procedure LoadPerson;
+    procedure CalculateValues;
+    function VerifyFields: Boolean;
+  public
+
+    { Public declarations }
+
+  end;
+
+var
+  FFinancialTransaction: TFFinancialTransaction;
+
+implementation
+
+{$R *.dfm}
+
+uses
+  UDM, UPreviewFR;
+
+procedure TFFinancialTransaction.BtnCancelFinancialTransactionClick(Sender: TObject);
+begin
+  PFinancialTransaction.Visible := False;
+  PData.Enabled := True;
+  PButtons.Enabled := True;
+end;
+
+procedure TFFinancialTransaction.BtnCloseClick(Sender: TObject);
+begin
+  Close;
+end;
+
+procedure TFFinancialTransaction.BtnDeleteClick(Sender: TObject);
+var
+  temp: string;
+begin
+  if Application.MessageBox('Deseja confirmar a exclusão do registro?',
+    'Exclusão', MB_YESNO + MB_ICONWARNING) = IDYES then
+  begin
+    try
+      Temp := '';
+
+      if DM.FDTransactionData.TransactionIntf.Active then
+        DM.FDTransactionData.Rollback;
+      DM.FDTransactionData.StartTransaction;
+
+      temp:= 'DELETE FROM TB_Financial_Transaction WHERE PK_Financial_Transaction = ' + dm.SQLFinancialTransaction.FieldByName('PK_Financial_Transaction').AsString;
+
+      PM.RunSQL(temp, DM.SQLData);
+      DM.FDTransactionData.Commit;
+    Except
+      if DM.FDTransactionData.TransactionIntf.Active then
+        DM.FDTransactionData.Rollback;
+      ShowMessage('Ocorreu um erro ao excluir!');
+      Exit;
+    end;
+
+    ShowMessage('Registro excluído com sucesso!');
+
+    EdtFilter.Text := '';
+    BtnSearchClick(nil);
+  end;
+
+
+end;
+
+procedure TFFinancialTransaction.BtnEditClick(Sender: TObject);
+begin
+  PFinancialTransaction.Visible := True;
+  PM.CentralizePanel(Self, PFinancialTransaction);
+  ShowFinancialTransaction(1);
+  PData.Enabled := False;
+  PButtons.Enabled := False;
+end;
+
+procedure TFFinancialTransaction.BtnNewClick(Sender: TObject);
+begin
+  PFinancialTransaction.Visible := True;
+  PM.CentralizePanel(Self, PFinancialTransaction);
+  ShowFinancialTransaction(0);
+  PData.Enabled := False;
+  PButtons.Enabled := False;
+end;
+
+procedure TFFinancialTransaction.BtnReportClick(Sender: TObject);
+begin
+  DM.frxReportGeral.Clear;
+  if (FileExists(ExtractFilePath(ParamStr(0)) + 'Report\Financial.Listing.fr3')) then
+    DM.frxReportGeral.LoadFromFile(ExtractFilePath(ParamStr(0)) + 'Report\Financial.Listing.fr3')
+  else
+    Application.MessageBox('O arquivo do relatório não foi encontrado! Tente atualizar seu relatório','Arquivo não encontrado',0);
+
+
+  DM.frxDBDatasetFinancial.DataSource:= DM.DSFinancialTransaction;
+  DM.frxReportGeral.PrepareReport();
+
+  if FPreviewFR = nil then
+    Application.CreateForm(TFPreviewFR, FPreviewFR);
+  DM.frxReportGeral.Preview:= FPreviewFR.frxPreview;
+  FPreviewFR.ShowModal;
+  Exit;
+end;
+
+procedure TFFinancialTransaction.BtnSaveFinancialTransactionClick(Sender: TObject);
+begin
+  if VerifyFields = False then
+  begin
+    ShowMessage('Há campos que precisam ser preenchidos. Todos os campos são obrigatórios!');
+    Exit;
+  end;
+
+  if Application.MessageBox('Deseja salvar os dados?', 'Salvar', MB_YESNO +
+    MB_ICONQUESTION) = IDNO then
+  begin
+    exit;
+  end;
+
+  SaveFinancialTransaction(FinancialTransactionControl);
+  FinancialTransactionControl := -1;
+end;
+
+procedure TFFinancialTransaction.BtnSearchClick(Sender: TObject);
+var
+  temp, where, date, order, orientation: string;
+begin
+  temp := 'SELECT F.*, P.PERSON_NAME, U.USER_NAME,'
+        + ' CASE F.TRANSACTION_TYPE'
+        + ' WHEN 0 THEN ' + QuotedStr('Entrada')
+        + ' WHEN 1 THEN ' + QuotedStr('Saída')
+        + ' end as TRANSACTION_TYPE_TEXT'
+        + ' FROM TB_Financial_Transaction F'
+        + ' LEFT JOIN TB_PERSON P ON (P.PK_PERSON = F.FK_PERSON)'
+        + ' LEFT JOIN TB_USER U ON (U.PK_USER = F.FK_USER)'
+        + ' where F.Transaction_Date between ' + PM.SaveDate(Datetostr(DTStartDate.date))
+        + ' and ' + PM.SaveDate(datetostr(DTFinalDate.date));
+  where := '';
+
+  if EdtFilter.Text <> '' then
+  begin
+    case CBFilter.ItemIndex of
+      0:
+        where := ' and F.PK_Financial_Transaction = ' + EdtFilter.Text;
+      1:
+        where := ' and UPPER(P.PERSON_NAME) like UPPER(' + QuotedStr('%' + EdtFilter.Text + '%') + ')';
+      2:
+        where := ' and UPPER(U.USER_NAME) like UPPER(' + QuotedStr('%' + EdtFilter.Text + '%') + ')';
+    end;
+  end;
+
+  case RGOrder.ItemIndex of
+    0: order := ' order by f.PK_FINANCIAL_TRANSACTION';
+    1: order := ' order by f.TRANSACTION_DATE';
+    2: order := ' order by f.TRANSACTION_VALUE';
+    3: order := ' order by P.PERSON_NAME';
+    4: order := ' order by U.USER_NAME';
+  end;
+
+  case RGOrientation.ItemIndex of
+    0: orientation := ' asc';
+    1: orientation := ' desc';
+  end;
+
+  temp := temp + where + order + orientation;
+
+  PM.RunSQL(temp, dm.SQLFinancialTransaction);
+  ButtonControl;
+end;
+
+procedure TFFinancialTransaction.ButtonControl;
+begin
+  if DM.SQLFinancialTransaction.Active = True then
+  begin
+    if DM.SQLFinancialTransaction.FieldByName('PK_Financial_Transaction').AsString <> '' then
+    begin
+      BtnDelete.Enabled := True;
+      BtnReport.Enabled := True;
+    end
+  end
+  else
+  begin
+    BtnDelete.Enabled := False;
+    BtnReport.Enabled := False;
+  end;
+end;
+
+procedure TFFinancialTransaction.CalculateValues;
+begin
+  lblCurrentBalance.Caption := '--------------';
+  lblNewBalance.Caption := '--------------';
+
+  if CBPersonName.ItemIndex >= 0 then
+  begin
+    lblCurrentBalance.Caption := CBPersonBalance.Text;
+    if EdtTransactionValue.Text <> '' then
+    begin
+      case RGTransactionType.ItemIndex of
+        0 : begin
+              lblNewBalance.Caption := FloatToStr(StrToFloat(CBPersonBalance.Text) + StrToFloat(EdtTransactionValue.Text));
+            end;
+        1 : begin
+              lblNewBalance.Caption := FloatToStr(StrToFloat(CBPersonBalance.Text) - StrToFloat(EdtTransactionValue.Text));
+            end;
+      end;
+
+    end;
+  end;
+end;
+
+procedure TFFinancialTransaction.CBPersonNameChange(Sender: TObject);
+begin
+  CBPKPerson.ItemIndex := CBPersonName.ItemIndex;
+  CBPersonBalance.ItemIndex := CBPersonName.ItemIndex;
+  CalculateValues;
+end;
+
+procedure TFFinancialTransaction.ClearFields;
+begin
+  EdtPKFinancialTransaction.Text := '';
+  EdtTransactionValue.Text := '';
+  RGTransactionType.ItemIndex := 0;
+  lblCurrentBalance.Caption := '--------------';
+  lblNewBalance.Caption := '--------------';
+end;
+
+procedure TFFinancialTransaction.EdtFilterKeyPress(Sender: TObject; var Key: Char);
+begin
+  if CBFilter.ItemIndex = 0 then
+    Key := PM.ClearEdit(Sender as TCustomEdit, Key);
+end;
+
+procedure TFFinancialTransaction.EdtTransactionValueExit(Sender: TObject);
+begin
+  if EdtTransactionValue.Text <> '' then
+    CalculateValues;
+end;
+
+procedure TFFinancialTransaction.EdtTransactionValueKeyPress(Sender: TObject; var Key: Char);
+begin
+  Key:= PM.ClearEdit(Sender as TCustomEdit, Key, ',');
+end;
+
+procedure TFFinancialTransaction.FormActivate(Sender: TObject);
+begin
+  ButtonControl;
+end;
+
+procedure TFFinancialTransaction.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  DM.SQLFinancialTransaction.Close;
+
+  FFinancialTransaction:= nil;
+  Action:= caFree;
+end;
+
+procedure TFFinancialTransaction.FormCreate(Sender: TObject);
+begin
+  DTStartDate.Date:= Date - 30;
+  DTFinalDate.date:= Date;
+end;
+
+procedure TFFinancialTransaction.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if PFinancialTransaction.Visible = False then
+  begin
+    case Key of
+      VK_INSERT : if BtnNew.Enabled then
+                    BtnNewClick(nil);
+      VK_DELETE : if BtnDelete.Enabled then
+                    BtnDeleteClick(nil);
+          VK_F3 : if PButtons.Enabled then
+                    BtnSearchClick(nil);
+    end;
+  end;
+end;
+
+procedure TFFinancialTransaction.FormKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = #27 then
+  begin
+    Key:= #0;
+    if PFinancialTransaction.Visible then
+      BtnCancelFinancialTransactionClick(nil)
+    else
+      Close;
+  end;
+end;
+
+procedure TFFinancialTransaction.GDataDrawColumnCell(Sender: TObject; const Rect: TRect; DataCol: Integer;
+  Column: TColumn; State: TGridDrawState);
+begin
+  if DM.SQLFinancialTransaction.Active = False then
+    Exit;
+
+  with (Sender as TDBGrid) do
+  begin
+    Options:= Options + [dgRowSelect];
+    DefaultDrawColumnCell(Rect, DataCol, Column, State);
+  end;
+end;
+
+procedure TFFinancialTransaction.LoadPerson;
+var
+  Temp: String;
+begin
+  CBPKPerson.Items.Clear;
+  CBPersonName.Items.Clear;
+  CBPersonBalance.Items.Clear;
+
+  Temp := 'select pk_person, person_name, balance from tb_person';
+  PM.RunSQL(Temp, DM.SQLGeneral);
+
+  DM.SQLGeneral.First;
+  while not DM.SQLGeneral.Eof do
+  begin
+    CBPKPerson.Items.Add(DM.SQLGeneral.FieldByName('pk_person').AsString);
+    CBPersonName.Items.Add(DM.SQLGeneral.FieldByName('person_name').AsString);
+    CBPersonBalance.Items.Add(DM.SQLGeneral.FieldByName('balance').AsString);
+
+    DM.SQLGeneral.Next;
+  end;
+
+  CBPKPerson.ItemIndex:= -1;
+  CBPersonName.ItemIndex:= -1;
+  CBPersonBalance.ItemIndex:= -1;
+end;
+
+procedure TFFinancialTransaction.MEdtTransactionDateExit(Sender: TObject);
+begin
+  if MEdtTransactionDate.Text <> '  /  /    ' then
+  begin
+    if not(PM.ValidateDate(MEdtTransactionDate.Text)) then
+    begin
+      ShowMessage('Data Inválida');
+      MEdtTransactionDate.Text:= '';
+      if MEdtTransactionDate.CanFocus then
+        MEdtTransactionDate.SetFocus;
+      Exit;
+    end;
+
+  end
+  else
+    MEdtTransactionDate.Text := DateToStr(Date());
+end;
+
+procedure TFFinancialTransaction.SaveFinancialTransaction(ControlIndex: integer);
+var
+  temp: string;
+begin
+  try
+    Temp := '';
+
+    if DM.FDTransactionData.TransactionIntf.Active then
+      DM.FDTransactionData.Rollback;
+    DM.FDTransactionData.StartTransaction;
+
+    case FinancialTransactionControl of
+      0 : begin
+            temp:= 'INSERT INTO TB_Financial_Transaction (TRANSACTION_TYPE, TRANSACTION_VALUE, FK_PERSON, FK_USER, TRANSACTION_DATE) VALUES ('
+                 +  IntToStr(RGTransactionType.ItemIndex) + ','
+                 +  PM.SaveNumeric(EdtTransactionValue.Text) + ','
+                 +  CBPKPerson.Text + ','
+                 +  DM.PKUser + ','
+                 +  PM.SaveDate(MEdtTransactionDate.Text) + ')'
+          end;
+
+    end;
+
+    PM.RunSQL(temp, DM.SQLData);
+    DM.FDTransactionData.Commit;
+  Except
+    if DM.FDTransactionData.TransactionIntf.Active then
+      DM.FDTransactionData.Rollback;
+    ShowMessage('Ocorreu um erro ao salvar os dados!');
+    Exit;
+  end;
+
+  ShowMessage('Dados salvos com sucesso!');
+  ClearFields;
+  BtnCancelFinancialTransactionClick(nil);
+  EdtFilter.Text := '';
+  BtnSearchClick(nil);
+end;
+
+procedure TFFinancialTransaction.ShowFinancialTransaction(ControlIndex: integer);
+begin
+  FinancialTransactionControl := ControlIndex;
+  ClearFields;
+  case ControlIndex of
+    0:  begin
+          EdtPKFinancialTransaction.Text := 'Não Registrado';
+          PSubTitle.Caption := 'CADASTRAR FINANCEIRO';
+          LoadPerson;
+        end;
+  end;
+end;
+
+function TFFinancialTransaction.VerifyFields: Boolean;
+begin
+  Result := True;
+
+  if ((MEdtTransactionDate.Text = '  /  /    ') or (CBPersonName.ItemIndex < 0) or (EdtTransactionValue.Text = '') or (RGTransactionType.ItemIndex <0)) then
+    Result:= False;
+end;
+
+end.
+
