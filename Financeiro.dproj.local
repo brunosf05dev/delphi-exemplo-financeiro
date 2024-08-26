@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2024/08/22 10:18:23.000.796,=C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2024/08/22 12:54:09.000.252,C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\Financeiro.dproj=C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\Project1.dproj</Transaction>
+    <Transaction>2024/08/22 12:57:03.000.533,C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\UMain.dfm=C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\Unit1.dfm</Transaction>
+    <Transaction>2024/08/22 12:57:03.000.533,C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\UMain.pas=C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2024/08/22 12:57:12.000.648,C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\ULogin.dfm=C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\UMain.dfm</Transaction>
+    <Transaction>2024/08/22 12:57:12.000.648,C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\ULogin.pas=C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\UMain.pas</Transaction>
+    <Transaction>2024/08/22 13:27:01.000.555,C:\Users\Dev2\Financeiro\ULogin.pas=C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\ULogin.pas</Transaction>
+    <Transaction>2024/08/22 13:27:01.000.555,C:\Users\Dev2\Financeiro\ULogin.dfm=C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\ULogin.dfm</Transaction>
+    <Transaction>2024/08/22 13:27:09.000.160,C:\Users\Dev2\Financeiro\Financeiro.dproj=C:\Users\Dev2\Documents\Embarcadero\Studio\Projects\Financeiro.dproj</Transaction>
+    <Transaction>2024/08/22 13:36:15.000.156,=C:\Users\Dev2\Financeiro\Unit1.pas</Transaction>
+    <Transaction>2024/08/22 13:36:31.000.261,=C:\Users\Dev2\Financeiro\Unit1.pas</Transaction>
+    <Transaction>2024/08/22 13:37:25.000.521,=C:\Users\Dev2\Financeiro\Unit2.pas</Transaction>
+    <Transaction>2024/08/22 13:38:12.000.836,C:\Users\Dev2\Financeiro\UDM.pas=C:\Users\Dev2\Financeiro\Unit2.pas</Transaction>
+    <Transaction>2024/08/22 13:38:12.000.836,C:\Users\Dev2\Financeiro\UDM.dfm=C:\Users\Dev2\Financeiro\Unit2.dfm</Transaction>
+    <Transaction>2024/08/22 14:44:35.000.877,=C:\Users\Dev2\Financeiro\Unit1.pas</Transaction>
+    <Transaction>2024/08/22 14:51:54.000.212,C:\Users\Dev2\Financeiro\ProcMethods.pas=C:\Users\Dev2\Financeiro\Unit1.pas</Transaction>
+    <Transaction>2024/08/23 08:54:47.000.673,=C:\Users\Dev2\Financeiro\Unit1.pas</Transaction>
+    <Transaction>2024/08/23 08:56:29.000.273,C:\Users\Dev2\Financeiro\Unit1.pas=C:\Users\Dev2\Financeiro\UMain.pas</Transaction>
+    <Transaction>2024/08/23 08:56:29.000.273,C:\Users\Dev2\Financeiro\Unit1.dfm=C:\Users\Dev2\Financeiro\UMain.dfm</Transaction>
+    <Transaction>2024/08/23 09:49:55.000.179,=C:\Projetos\Controle_Frotas\Sistema\ULocCentroTrabalho.pas</Transaction>
+    <Transaction>2024/08/23 09:50:17.000.775,C:\Projetos\Controle_Frotas\Sistema\ULocCentroTrabalho.pas=</Transaction>
+    <Transaction>2024/08/23 09:53:19.000.850,=C:\Users\Dev2\Financeiro\UPerson.pas</Transaction>
+    <Transaction>2024/08/23 16:12:52.000.266,=C:\Users\Dev2\Financeiro\UUser.pas</Transaction>
+    <Transaction>2024/08/24 11:18:21.000.677,=C:\Users\Dev2\Financeiro\UFinancialTransaction.pas</Transaction>
+    <Transaction>2024/08/25 18:34:44.000.367,=C:\Users\Dev2\Financeiro\Forms\UMain.pas</Transaction>
+    <Transaction>2024/08/25 18:34:44.000.549,=C:\Users\Dev2\Financeiro\Forms\UPerson.pas</Transaction>
+    <Transaction>2024/08/25 18:34:44.000.045,=C:\Users\Dev2\Financeiro\Forms\UFinancialTransaction.pas</Transaction>
+    <Transaction>2024/08/25 18:34:44.000.735,=C:\Users\Dev2\Financeiro\Forms\UUser.pas</Transaction>
+    <Transaction>2024/08/25 18:34:44.000.171,=C:\Users\Dev2\Financeiro\Forms\ULogin.pas</Transaction>
+    <Transaction>2024/08/26 08:49:46.463,=C:\Users\Dev2\Financeiro\Forms\UPreviewFR.pas</Transaction>
+    <Transaction>2024/08/26 08:49:57.798,C:\Users\Dev2\Financeiro\Forms\UPreviewFR.pas=</Transaction>
+    <Transaction>2024/08/26 08:51:42.928,=C:\Users\Dev2\Financeiro\Unit1.pas</Transaction>
+    <Transaction>2024/08/26 08:52:15.973,C:\Users\Dev2\Financeiro\Forms\UPreviewFR.pas=C:\Users\Dev2\Financeiro\Unit1.pas</Transaction>
+    <Transaction>2024/08/26 08:52:15.973,C:\Users\Dev2\Financeiro\Forms\UPreviewFR.dfm=C:\Users\Dev2\Financeiro\Unit1.dfm</Transaction>
+  </Transactions>
+</BorlandProject>
